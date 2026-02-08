@@ -85,7 +85,7 @@ const Settings: React.FC = () => {
             {/* Preview Section */}
             <div className="bg-[#0d1421] dark:bg-slate-900 p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] text-white space-y-4 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[80px] rounded-full"></div>
-                <h3 className="text-2xl font-black tracking-tight relative z-10">Panace FinSys Premium</h3>
+                <h3 className="text-2xl font-black tracking-tight relative z-10">Panacée FinSys Premium</h3>
                 <p className="text-slate-400 font-medium max-w-md relative z-10">
                     L'expérience utilisateur a été optimisée pour la clarté et la rapidité. Vos réglages sont synchronisés avec votre navigateur.
                 </p>

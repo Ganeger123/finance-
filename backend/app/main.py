@@ -108,14 +108,21 @@ def health_check():
         "project_name": settings.PROJECT_NAME
     }
 
-# Middlewares last (Outermost first)
+# Request logging and exception handling
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     origin = request.headers.get("origin")
     logger.info(f"📡 Request: {request.method} {request.url.path} | Origin: {origin}")
-    response = await call_next(request)
-    # Ensure headers are present even if middleware order gets weird
-    return response
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ UNHANDLED ERROR during {request.method} {request.url.path}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error message: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise
 
 app.add_middleware(
     CORSMiddleware,

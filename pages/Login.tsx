@@ -168,7 +168,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             The next generation of <span className="text-blue-500 italic block">financial</span> management.
           </h1>
           <p className="text-xl text-slate-400 leading-relaxed font-medium max-w-lg">
-            Streamline your company's income and expenses with Panace FinSys. Clean, fast, and Haitian Gourde-native.
+            Streamline your company's income and expenses with Panacée FinSys. Clean, fast, and Haitian Gourde-native.
           </p>
 
           <div className="flex gap-16 pt-12 border-t border-slate-800/50">
@@ -191,7 +191,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div className="space-y-3">
               <h2 className="text-4xl font-black text-slate-900 tracking-tight">{isRegistering ? t('create_account') : 'Sign In'}</h2>
               <p className="text-sm font-medium text-slate-400">
-                {isRegistering ? 'Join Panace FinSys today.' : 'Welcome back! Please enter your details.'}
+                {isRegistering ? 'Join Panacée FinSys today.' : 'Welcome back! Please enter your details.'}
               </p>
             </div>
 
@@ -296,7 +296,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </div>
 
           <p className="mt-10 text-center text-[10px] text-slate-500 uppercase font-black tracking-[0.3em] opacity-60">
-            © 2024 Panace Financial Systems • HTG Support Active
+            © 2024 Panacée Financial Systems • HTG Support Active
           </p>
         </div>
       </div>

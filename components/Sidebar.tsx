@@ -108,11 +108,11 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
         {/* Brand Logo */}
         <div className="flex items-center justify-between mb-10 px-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#10b981] rounded-xl flex items-center justify-center font-black text-xl shadow-lg shadow-emerald-500/20">
-              F
+            <div className="w-10 h-10 flex items-center justify-center font-black text-xl">
+              <img src="/pwa_icon_512.png" alt="Logo" className="w-full h-full object-contain rounded-xl" />
             </div>
             <div>
-              <h1 className="font-black text-lg leading-tight tracking-tight">FinCore</h1>
+              <h1 className="font-black text-lg leading-tight tracking-tight text-white">Panacée</h1>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Gestion Financière</p>
             </div>
           </div>

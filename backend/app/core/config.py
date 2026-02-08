@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "HTG Financial Management"
+    PROJECT_NAME: str = "Panacée Financial Management"
     SECRET_KEY: str = "your-super-secret-key-change-it-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = "hachllersocials@gmail.com"
     SMTP_PASSWORD: Optional[str] = None
     EMAILS_FROM_EMAIL: str = "hachllersocials@gmail.com"
-    EMAILS_FROM_NAME: str = "HTG FinSys"
+    EMAILS_FROM_NAME: str = "Panacée FinSys"
     
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = [

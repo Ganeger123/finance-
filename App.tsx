@@ -222,7 +222,7 @@ const App: React.FC = () => {
         >
           <span className="text-2xl">☰</span>
         </button>
-        <span className="font-bold text-lg dark:text-white">FinCore</span>
+        <span className="font-bold text-lg dark:text-white">Panacée</span>
         <div className="w-8"></div> {/* Spacer for balance */}
       </div>
 

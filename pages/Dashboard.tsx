@@ -53,7 +53,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save('Panace-Financial-Report.pdf');
+      pdf.save('Panacée-Financial-Report.pdf');
     } catch (error) {
       console.error(error);
     }
