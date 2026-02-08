@@ -5,7 +5,7 @@ from datetime import timedelta
 from app.models.base import get_db
 from app.models.user import User, UserStatus
 from app.schemas.user import UserCreate, UserOut
-from app.schemas.income import Token
+from app.schemas.auth import Token
 from app.auth.security import (
     verify_password, 
     get_password_hash, 

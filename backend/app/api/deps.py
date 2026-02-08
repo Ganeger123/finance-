@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.base import get_db
 from app.models.user import User, UserRole, UserStatus
-from app.schemas.income import TokenData
+from app.schemas.auth import TokenData
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
@@ -55,6 +55,9 @@ def get_current_active_admin(current_user: User = Depends(get_current_user)) -> 
             detail="The user does not have enough privileges"
         )
     return current_user
+
+# Alias for backward compatibility/consistency with vendors.py
+require_admin = get_current_active_admin
 
 def require_approved_user(current_user: User = Depends(get_current_user)) -> User:
     """Ensure user is approved before accessing protected resources. Admins are exempt."""

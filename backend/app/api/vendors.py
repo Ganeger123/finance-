@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from app.api.deps import get_db, require_admin, get_current_user
+from app.api.deps import get_db, get_current_active_admin, get_current_user
 from app.models.vendor import Vendor
 from app.models.user import User
 from app.schemas.vendor import VendorCreate, VendorUpdate, Vendor as VendorSchema
@@ -12,7 +12,7 @@ router = APIRouter()
 def create_vendor(
     vendor: VendorCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     """Create a new vendor (Admin only)."""
     db_vendor = db.query(Vendor).filter(Vendor.name == vendor.name).first()
@@ -53,7 +53,7 @@ def update_vendor(
     vendor_id: int,
     vendor_update: VendorUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     """Update a vendor (Admin only)."""
     db_vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
@@ -73,7 +73,7 @@ def update_vendor(
 def delete_vendor(
     vendor_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(get_current_active_admin)
 ):
     """Delete a vendor (Admin only)."""
     db_vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
