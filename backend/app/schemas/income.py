@@ -22,11 +22,10 @@ class IncomeOut(IncomeBase):
     class Config:
         from_attributes = True
 
-class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str
+class IncomeOut(IncomeBase):
+    id: int
+    created_at: datetime
+    creator_id: int
 
-class TokenData(BaseModel):
-    email: Optional[str] = None
-    role: Optional[str] = None
+    class Config:
+        from_attributes = True

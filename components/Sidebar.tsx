@@ -14,26 +14,80 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
   const { t } = useLanguage();
 
   const menuItems = [
-    { id: 'dashboard', label: t('dashboard'), icon: '📊', adminOnly: true },
-    { id: 'expenses', label: t('expenses'), icon: '💸', adminOnly: false },
-    { id: 'income', label: t('income'), icon: '💰', adminOnly: false },
-    { id: 'workspaces', label: t('workspaces'), icon: '🏢', adminOnly: false },
-    { id: 'custom-expenses', label: t('dynamic_expenses'), icon: '📝', adminOnly: false },
-    { id: 'form-builder', label: t('form_builder'), icon: '🛠️', adminOnly: true },
-    { id: 'search', label: t('search'), icon: '🔍', adminOnly: false },
-    { id: 'users', label: t('user_management'), icon: '👥', adminOnly: true },
-    { id: 'vendors', label: t('vendors'), icon: '🏪', adminOnly: false },
-    { id: 'reports', label: t('reports'), icon: '📄', adminOnly: false },
-    { id: 'dashboard', icon: '📊', label: t('dashboard') || 'Tableau de Bord', adminOnly: true },
-    { id: 'custom-expenses', icon: '📈', label: t('rentrees') || 'Rentrées', adminOnly: false },
-    { id: 'expenses', icon: '💸', label: t('expenses') || 'Dépenses', adminOnly: false },
-    { id: 'vendors', icon: '👥', label: t('vendors') || 'Vendeurs', adminOnly: false },
-    { id: 'reports', icon: '📄', label: t('reports') || 'Rapports', adminOnly: false },
+    {
+      id: 'dashboard',
+      label: 'Tableau de Bord',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+        </svg>
+      ),
+      adminOnly: true
+    },
+    {
+      id: 'rentrees',
+      label: 'Rentrées',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      ),
+      adminOnly: false
+    },
+    {
+      id: 'expenses',
+      label: 'Dépenses',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" />
+        </svg>
+      ),
+      adminOnly: false
+    },
+    {
+      id: 'vendors',
+      label: 'Vendeurs',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
+      adminOnly: false
+    },
+    {
+      id: 'reports',
+      label: 'Rapports',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      adminOnly: false
+    },
   ];
 
   const supportItems = [
-    { id: 'settings', icon: '⚙️', label: t('settings') || 'Paramètres', adminOnly: false },
-    { id: 'help', icon: '❓', label: t('help') || 'Aide', adminOnly: false },
+    {
+      id: 'settings',
+      label: 'Paramètres',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+      adminOnly: false
+    },
+    {
+      id: 'help',
+      label: 'Aide',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      adminOnly: false
+    },
   ];
 
   const handleNavigate = (id: string) => {
@@ -54,7 +108,7 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
         {/* Brand Logo */}
         <div className="flex items-center justify-between mb-10 px-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center font-black text-xl shadow-lg shadow-emerald-500/20">
+            <div className="w-10 h-10 bg-[#10b981] rounded-xl flex items-center justify-center font-black text-xl shadow-lg shadow-emerald-500/20">
               F
             </div>
             <div>
@@ -70,9 +124,9 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
         </div>
 
         {/* Main Navigation */}
-        <div className="space-y-6 flex-1 overflow-y-auto no-scrollbar">
+        <div className="space-y-8 flex-1 overflow-y-auto no-scrollbar">
           <div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-2">Principal</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-2 italic">PRINCIPAL</p>
             <nav className="space-y-1">
               {menuItems.map((item) => {
                 if (item.adminOnly && role !== 'ADMIN') return null;
@@ -81,13 +135,13 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
                   <button
                     key={item.id}
                     onClick={() => handleNavigate(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${isActive
-                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 ${isActive
+                      ? 'bg-[#10b981] text-white shadow-lg shadow-emerald-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                       }`}
                   >
-                    <span className="text-lg opacity-80">{item.icon}</span>
-                    {item.label}
+                    <span className={`${isActive ? 'opacity-100' : 'opacity-60'}`}>{item.icon}</span>
+                    <span className="tracking-tight">{item.label}</span>
                   </button>
                 );
               })}
@@ -96,7 +150,7 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
 
           {/* Support Section */}
           <div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-2">Support</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-2 italic">SUPPORT</p>
             <nav className="space-y-1">
               {supportItems.map((item) => {
                 const isActive = activePage === item.id;
@@ -104,13 +158,13 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
                   <button
                     key={item.id}
                     onClick={() => handleNavigate(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${isActive
-                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 ${isActive
+                      ? 'bg-[#10b981] text-white shadow-lg shadow-emerald-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                       }`}
                   >
-                    <span className="text-lg opacity-80">{item.icon}</span>
-                    {item.label}
+                    <span className={`${isActive ? 'opacity-100' : 'opacity-60'}`}>{item.icon}</span>
+                    <span className="tracking-tight">{item.label}</span>
                   </button>
                 );
               })}
@@ -120,23 +174,15 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
 
         {/* User / Bottom */}
         <div className="mt-auto pt-6 border-t border-slate-800/50">
-          <div className="flex items-center gap-3 px-2 mb-4">
-            <div className="w-10 h-10 bg-slate-800 dark:bg-slate-900 rounded-xl flex items-center justify-center font-black text-xs text-slate-400">
+          <div className="flex items-center gap-3 px-2 mb-0">
+            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center font-black text-xs text-white shadow-lg shadow-emerald-500/20">
               {userName?.substring(0, 2).toUpperCase() || 'AD'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm truncate">{userName || 'Admin'}</p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{role || 'Directeur'}</p>
+              <p className="font-black text-sm truncate uppercase tracking-tight">{userName || 'Admin'}</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black italic">{role === 'ADMIN' ? 'Directeur' : 'Staff'}</p>
             </div>
           </div>
-
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-100 bg-red-500/10 hover:bg-red-500/20 transition-all duration-200 border border-red-500/20"
-          >
-            <span className="text-lg">🚪</span>
-            {t('logout') || 'Déconnexion'}
-          </button>
         </div>
       </div>
     </>

@@ -1,6 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
 :root {
   /* Light Mode (Design Match) */
-  --bg-main: #f8fafc;
+  --bg-main: #fcfdfe;
   --bg-card: #ffffff;
   --bg-sidebar: #131b2e;
   --accent-green: #10b981;
@@ -9,7 +11,7 @@
   --text-secondary: #64748b;
   --border-color: #f1f5f9;
 
-  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-card: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
 }
 
 .dark {
