@@ -1,0 +1,6 @@
+
+{
+  "name": "Panace FinSys - Financial Management Dashboard",
+  "description": "A professional FinTech internal financial system for tracking income and expenses in Haitian Gourdes (HTG), featuring role-based access control and real-time analytics.",
+  "requestFramePermissions": []
+}
