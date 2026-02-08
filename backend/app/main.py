@@ -77,9 +77,9 @@ async def lifespan(app: FastAPI):
     logger.info(f"🚀 Starting App with DB: ...@{masked_db}")
     logger.info(f"🔒 Allowed CORS Origins: {settings.BACKEND_CORS_ORIGINS}")
     
-    # Run migrations before init_db to ensure schema is up-to-date
-    run_migrations()
+    # Create tables first, then run migrations to add any missing columns
     init_db()
+    run_migrations()
     yield
     # Shutdown logic (none needed for now)
 

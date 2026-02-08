@@ -22,10 +22,3 @@ class IncomeOut(IncomeBase):
     class Config:
         from_attributes = True
 
-class IncomeOut(IncomeBase):
-    id: int
-    created_at: datetime
-    creator_id: int
-
-    class Config:
-        from_attributes = True
