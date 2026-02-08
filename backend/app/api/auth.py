@@ -19,6 +19,10 @@ from app.services.email import send_new_user_email
 
 router = APIRouter()
 
+@router.get("/health")
+def auth_health():
+    return {"status": "ok", "message": "Auth router is working"}
+
 @router.post("/register", response_model=UserOut)
 def register(user_in: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user_in.email).first()

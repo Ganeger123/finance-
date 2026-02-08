@@ -4,7 +4,12 @@ from sqlalchemy import create_engine
 from app.core.config import settings
 
 engine = create_engine(
-    settings.sync_database_url, connect_args={"check_same_thread": False} if "sqlite" in settings.sync_database_url else {}
+    settings.sync_database_url, 
+    connect_args={"check_same_thread": False} if "sqlite" in settings.sync_database_url else {},
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=30,
+    pool_pre_ping=True
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

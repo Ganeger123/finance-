@@ -108,6 +108,16 @@ def health_check():
         "project_name": settings.PROJECT_NAME
     }
 
+@app.get("/api/db-check")
+def db_check(db: Session = Depends(get_db)):
+    try:
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
+        return {"status": "connected", "database": "reachable"}
+    except Exception as e:
+        logger.error(f"❌ Database check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Database unreachable: {str(e)}")
+
 # Request logging and exception handling
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
