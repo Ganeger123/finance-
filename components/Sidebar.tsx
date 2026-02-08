@@ -109,7 +109,7 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
         <div className="flex items-center justify-between mb-10 px-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 flex items-center justify-center font-black text-xl">
-              <img src="/pwa_icon_512.png" alt="Logo" className="w-full h-full object-contain rounded-xl" />
+              <img src="/logo-panacee.png" alt="Logo" className="w-full h-full object-contain rounded-xl" />
             </div>
             <div>
               <h1 className="font-black text-lg leading-tight tracking-tight text-white">Panacée</h1>

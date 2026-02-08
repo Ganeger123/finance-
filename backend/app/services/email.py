@@ -16,15 +16,15 @@ def send_new_user_email(user_email: str, full_name: str):
     message = MIMEMultipart()
     message["From"] = f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL}>"
     message["To"] = user_email
-    message["Subject"] = "Bienvenue sur Panace FinSys!"
+    message["Subject"] = "Bienvenue sur Panacée FinSys!"
 
     body = f"""
     Bonjour {full_name},
 
-    Votre compte a été créé avec succès sur le tableau de bord de gestion financière Panace.
+    Votre compte a été créé avec succès sur le tableau de bord de gestion financière Panacée.
     Vous pouvez maintenant vous connecter pour enregistrer vos transactions.
 
-    L'équipe Panace.
+    L'équipe Panacée.
     """
     message.attach(MIMEText(body, "plain"))
 
@@ -52,7 +52,7 @@ def send_expense_notification_email(admin_email: str, expense_data: dict, creato
     message["Subject"] = f"Nouvelle Dépense Logguée: {expense_data['category']} ({expense_data['amount']} HTG)"
 
     body = f"""
-    Une nouvelle dépense a été enregistrée dans Panace FinSys.
+    Une nouvelle dépense a été enregistrée dans Panacée FinSys.
 
     Détails de la transaction:
     --------------------------
@@ -62,7 +62,7 @@ def send_expense_notification_email(admin_email: str, expense_data: dict, creato
     Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     Enregistré par: {creator_name}
 
-    L'équipe Panace Admin.
+    L'équipe Panacée Admin.
     """
     message.attach(MIMEText(body, "plain"))
 

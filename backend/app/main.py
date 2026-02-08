@@ -136,8 +136,7 @@ async def log_requests(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    # Using regex to ensure we match all variations of the origin
-    allow_origin_regex="https://.*\.onrender\.com|http://localhost:.*|http://127\.0\.0\.1:.*|http://0\.0\.0\.0:.*",
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
