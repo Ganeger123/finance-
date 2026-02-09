@@ -46,7 +46,7 @@ class PdfService:
         # Title
         month_name = datetime.date(year, month, 1).strftime("%B")
         title_style = ParagraphStyle('Title', parent=styles['Heading1'], alignment=1, spaceAfter=20)
-        elements.append(Paragraph(f"Financial Report - {month_name} {year}", title_style))
+        elements.append(Paragraph(f"Rapport Financier Panacée - {month_name} {year}", title_style))
         elements.append(Spacer(1, 12))
 
         # Executive Summary Table

@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 from app.models.base import get_db
 from app.models.expense import Expense
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.expense import ExpenseCreate, ExpenseOut
 from app.api.deps import require_approved_user, get_user_workspace, get_audit_logger
 from app.services.email import send_expense_notification_email
@@ -125,7 +125,7 @@ def delete_expense(
     current_user: User = Depends(require_approved_user),
     audit_log = Depends(get_audit_logger)
 ):
-    if current_user.role != "ADMIN":
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Only admins can delete expenses")
     
     db_expense = db.query(Expense).filter(Expense.id == expense_id).first()

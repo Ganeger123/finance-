@@ -71,7 +71,7 @@ def delete_income(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_approved_user)
 ):
-    if current_user.role != "ADMIN":
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Only admins can delete income records")
     
     db_income = db.query(Income).filter(Income.id == income_id).first()
