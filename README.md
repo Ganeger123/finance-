@@ -2,7 +2,7 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Panace FinSys - Financial Management Dashboard
+# Panacée FinSys - Financial Management Dashboard
 
 A high-end, production-ready financial management system for tracking income and expenses in Haitian Gourdes (HTG).
 
@@ -24,7 +24,7 @@ A high-end, production-ready financial management system for tracking income and
 
 ## 🔐 Credentials
 - **Admin**: `hachllersocials@gmail.com`
-- **Password**: `admin`
+- **Password**: `12122007`
 
 ## 📧 Email Notifications
 The system automatically sends a welcome email to every newly registered user. Ensure `SMTP_PASSWORD` is set in the `backend/.env` for this feature to work.
