@@ -129,7 +129,7 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-2 italic">PRINCIPAL</p>
             <nav className="space-y-1">
               {menuItems.map((item) => {
-                if (item.adminOnly && role !== 'ADMIN') return null;
+                if (item.adminOnly && role !== 'admin' && role !== 'super_admin') return null;
                 const isActive = activePage === item.id;
                 return (
                   <button
@@ -180,7 +180,7 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-black text-sm truncate uppercase tracking-tight">{userName || 'Admin'}</p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black italic">{role === 'ADMIN' ? 'Directeur' : 'Staff'}</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black italic">{(role === 'admin' || role === 'super_admin') ? 'Directeur' : 'Staff'}</p>
             </div>
           </div>
         </div>

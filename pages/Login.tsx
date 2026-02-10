@@ -45,7 +45,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           email,
           password,
           full_name: fullName,
-          role: 'STANDARD'
+          role: 'user'
         });
         setSuccess('Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
         setIsRegistering(false);
@@ -74,17 +74,17 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           id: decoded.sub || 'unknown',
           full_name: displayName,
           email: email,
-          role: decoded.role || 'STANDARD',
-          status: decoded.status || 'PENDING'
+          role: decoded.role || 'user',
+          status: decoded.status || 'pending'
         };
 
-        if (user.status === 'PENDING' && user.role !== 'ADMIN') {
+        if (user.status === 'pending' && user.role !== 'admin') {
           setPendingAccount({ email: user.email, name: user.full_name || 'User' });
           setIsLoading(false);
           return;
         }
 
-        if (user.status === 'REJECTED') {
+        if (user.status === 'rejected') {
           setError("Your account has been rejected. Please contact support.");
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');

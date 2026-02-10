@@ -147,7 +147,7 @@ const App: React.FC = () => {
           role: userData.role,
           status: userData.status
         });
-        if (userData.status === 'REJECTED') {
+        if (userData.status === 'rejected') {
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
           setUser(null);
@@ -175,7 +175,7 @@ const App: React.FC = () => {
 
   // Simple route guard
   useEffect(() => {
-    if (user && user.role !== 'ADMIN' && currentPage === 'dashboard') {
+    if (user && user.role !== 'admin' && user.role !== 'super_admin' && currentPage === 'dashboard') {
       setCurrentPage('expenses');
     }
   }, [user, currentPage]);
@@ -188,7 +188,7 @@ const App: React.FC = () => {
       </div>
     );
   }
-  if (!user || (user.status === 'PENDING' && user.role !== 'ADMIN')) {
+  if (!user || (user.status === 'pending' && user.role !== 'admin' && user.role !== 'super_admin')) {
     return <Login onLogin={setUser} />;
   }
 

@@ -1,6 +1,6 @@
 
-export type Role = 'ADMIN' | 'STANDARD';
-export type UserStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type Role = 'super_admin' | 'admin' | 'user';
+export type UserStatus = 'pending' | 'approved' | 'rejected';
 
 export interface User {
   id: string;

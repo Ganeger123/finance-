@@ -254,7 +254,7 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
                     <div className="text-sm font-black tracking-tight text-red-600">
                       -{formatHTG(tx.amount)}
                     </div>
-                    {role === 'ADMIN' && (
+                    {(role === 'admin' || role === 'super_admin') && (
                       <button
                         onClick={() => handleDelete(tx.id)}
                         className="text-slate-300 hover:text-red-500 transition-colors"

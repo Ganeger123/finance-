@@ -28,28 +28,37 @@ class Settings(BaseSettings):
     
     # CORS: list or comma-separated string from env (e.g. Render)
     BACKEND_CORS_ORIGINS: str = (
-        "https://panace-web.onrender.com,http://localhost:3000,http://localhost:5173,"
-        "http://127.0.0.1:3000,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173"
+        "https://panace-web.onrender.com,https://panace-api.onrender.com,"
+        "http://localhost:3000,http://localhost:5173,http://localhost:3005,"
+        "http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:3005,"
+        "http://localhost:4173,http://127.0.0.1:4173"
     )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
     def cors_origins_list(self) -> list[str]:
-        """CORS origins as list; always includes Render production AND development origins."""
-        parsed = _parse_cors_origins(self.BACKEND_CORS_ORIGINS)
-        
-        # Always include Render production URLs
-        required_origins = [
+        """CORS origins as list with Render production URLs ALWAYS included."""
+        # Critical production URLs that must always be included
+        critical_origins = [
             "https://panace-web.onrender.com",
             "https://panace-api.onrender.com",
         ]
         
-        for origin in required_origins:
-            if origin not in parsed:
-                parsed.append(origin)
+        # Parse configured origins
+        parsed = _parse_cors_origins(self.BACKEND_CORS_ORIGINS)
         
-        return parsed if parsed else required_origins
+        # Ensure all critical origins are included
+        result = []
+        for origin in critical_origins:
+            if origin not in result:
+                result.append(origin)
+        
+        for origin in parsed:
+            if origin not in result and origin not in critical_origins:
+                result.append(origin)
+        
+        return result if result else critical_origins
 
     @property
     def sync_database_url(self) -> str:
@@ -58,3 +67,4 @@ class Settings(BaseSettings):
         return self.DATABASE_URL
 
 settings = Settings()
+

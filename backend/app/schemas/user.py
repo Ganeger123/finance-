@@ -7,7 +7,7 @@ from datetime import datetime
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
-    role: UserRole = UserRole.STANDARD
+    role: UserRole = UserRole.USER
     status: UserStatus = UserStatus.PENDING
 
     @field_validator("role", mode="before")
@@ -30,7 +30,8 @@ class UserPasswordReset(BaseModel):
 
 class UserOut(UserBase):
     id: int
-    last_seen: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

@@ -49,15 +49,25 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     return user
 
 def get_current_active_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user does not have enough privileges"
+            detail="Admin privileges required"
         )
     return current_user
 
-# Alias for backward compatibility/consistency with vendors.py
+# Alias for backward compatibility/consistency
 require_admin = get_current_active_admin
+
+def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Ensure user has super_admin role."""
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super admin privileges required"
+        )
+    return current_user
+
 
 def require_approved_user(current_user: User = Depends(get_current_user)) -> User:
     """Ensure user is approved before accessing protected resources. Admins are exempt."""

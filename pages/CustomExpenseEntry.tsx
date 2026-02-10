@@ -190,7 +190,7 @@ const CustomExpenseEntry: React.FC<CustomExpenseEntryProps> = ({ workspace, role
                                             <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest">
                                                 {new Date(entry.created_at).toLocaleDateString()}
                                             </div>
-                                            {role === 'ADMIN' && (
+                                            {(role === 'admin' || role === 'super_admin') && (
                                                 <button
                                                     onClick={() => handleDeleteEntry(entry.id)}
                                                     className="text-[10px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest transition-colors opacity-100 md:opacity-0 group-hover:opacity-100"

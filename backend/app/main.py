@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 import os
 
-from app.api import auth, expenses, income, dashboard, workspaces, forms, users, reports, vendors
+from app.api import auth, expenses, income, dashboard, workspaces, forms, users, reports, vendors, admin, transactions
 from app.models.base import engine, Base, SessionLocal, get_db
 # Import all models to ensure they are registered with Base.metadata
 from app.models.user import User, UserRole, UserStatus
@@ -15,6 +15,8 @@ from app.models.workspace import Workspace
 from app.models.expense import Expense
 from app.models.income import Income
 from app.models.form_builder import ExpenseForm, ExpenseField, ExpenseEntry
+from app.models.transaction import Transaction
+from app.models.audit import AuditLog
 from app.auth.security import get_password_hash
 from app.db_migrations import run_migrations
 
@@ -44,12 +46,13 @@ def init_db():
                         email="hachllersocials@gmail.com",
                         hashed_password=pwd_hash,
                         full_name="Administrator",
-                        role=UserRole.ADMIN,
-                        status=UserStatus.APPROVED
+                        role=UserRole.SUPER_ADMIN,
+                        status=UserStatus.APPROVED,
+                        is_active=True
                     )
                     db.add(admin_user)
                     db.commit()
-                    logger.info("Default admin user created.")
+                    logger.info("Default super admin user created.")
                 
                 if not db.query(User).filter(User.email == "staff@finsys.ht").first():
                     try:
@@ -61,11 +64,13 @@ def init_db():
                         email="staff@finsys.ht",
                         hashed_password=pwd_hash,
                         full_name="Staff User",
-                        role=UserRole.STANDARD
+                        role=UserRole.ADMIN,
+                        status=UserStatus.APPROVED,
+                        is_active=True
                     )
                     db.add(staff_user)
                     db.commit()
-                    logger.info("Default staff user created.")
+                    logger.info("Default admin staff user created.")
             finally:
                 db.close()
                 
@@ -96,6 +101,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
+# Setup rate limiting
+from app.core.rate_limit import setup_rate_limiting
+setup_rate_limiting(app)
+
+
 # CORS: allow frontend (https://panace-web.onrender.com) and dev origins; required for cross-origin requests
 _cors_origins = list(settings.cors_origins_list)
 if not _cors_origins:
@@ -116,10 +126,12 @@ app.add_middleware(
 
 # Routes
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(admin.router, prefix="/api", tags=["Admin"])
 app.include_router(workspaces.router, prefix="/api/workspaces", tags=["Workspaces"])
 app.include_router(forms.router, prefix="/api/expense-forms", tags=["Expense Forms"])
 app.include_router(expenses.router, prefix="/api/expenses", tags=["Expenses"])
 app.include_router(income.router, prefix="/api/income", tags=["Income"])
+app.include_router(transactions.router, prefix="/api", tags=["Transactions"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(users.router, prefix="/api/users", tags=["User Management"])
 app.include_router(vendors.router, prefix="/api/vendors", tags=["Vendor Management"])

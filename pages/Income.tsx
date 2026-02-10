@@ -225,7 +225,7 @@ const Income: React.FC<IncomeProps> = ({ transactions, onAdd, selectedWorkspace,
                     <div className="text-base font-black tracking-tight text-emerald-600">
                       +{formatHTG(tx.amount)}
                     </div>
-                    {role === 'ADMIN' && (
+                    {(role === 'admin' || role === 'super_admin') && (
                       <button
                         onClick={() => handleDelete(tx.id)}
                         className="text-slate-300 hover:text-red-500 transition-colors"
