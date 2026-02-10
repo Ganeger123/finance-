@@ -1,13 +1,14 @@
 import time
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from app.core.config import settings
 import os
 
 from app.api import auth, expenses, income, dashboard, workspaces, forms, users, reports, vendors
-from app.models.base import engine, Base, SessionLocal
+from app.models.base import engine, Base, SessionLocal, get_db
 # Import all models to ensure they are registered with Base.metadata
 from app.models.user import User, UserRole, UserStatus
 from app.models.workspace import Workspace
