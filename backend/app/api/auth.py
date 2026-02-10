@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -7,8 +8,8 @@ from app.models.user import User, UserStatus
 from app.schemas.user import UserCreate, UserOut
 from app.schemas.auth import Token
 from app.auth.security import (
-    verify_password, 
-    get_password_hash, 
+    verify_password,
+    get_password_hash,
     create_access_token,
     create_refresh_token
 )
@@ -17,6 +18,7 @@ from jose import jwt, JWTError
 from app.core.config import settings
 from app.services.email import send_new_user_email
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/health")
@@ -50,26 +52,44 @@ def register(user_in: UserCreate, background_tasks: BackgroundTasks, db: Session
 
 @router.post("/login", response_model=Token)
 def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
-    user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+    try:
+        user = db.query(User).filter(User.email == form_data.username).first()
+        if not user:
+            logger.warning(f"Login failed: no user for email={form_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if not verify_password(form_data.password, user.hashed_password):
+            logger.warning(f"Login failed: bad password for email={form_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email, "role": user.role, "status": user.status, "version": user.token_version},
+            expires_delta=access_token_expires
         )
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email, "role": user.role, "status": user.status, "version": user.token_version}, 
-        expires_delta=access_token_expires
-    )
-    refresh_token = create_refresh_token(
-        data={"sub": user.email, "version": user.token_version}
-    )
-    return {
-        "access_token": access_token, 
-        "refresh_token": refresh_token, 
-        "token_type": "bearer"
-    }
+        refresh_token = create_refresh_token(
+            data={"sub": user.email, "version": user.token_version}
+        )
+        logger.info(f"Login success: email={user.email}")
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Login error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during login. Please try again.",
+        )
 
 @router.post("/refresh", response_model=Token)
 def refresh_token(refresh_token: str, db: Session = Depends(get_db)):

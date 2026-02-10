@@ -99,11 +99,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       let message = 'Une erreur est survenue.';
 
-      if (err.code === 'ERR_NETWORK') {
-        message = 'Connection failed. Please check if the backend is running and reachable.';
+      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        const apiUrl = (import.meta as any).env?.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
+        message = `Cannot reach the server. Check that the backend is running at ${apiUrl} and CORS allows this origin.`;
+      } else if (err.code === 'ECONNABORTED') {
+        message = 'Request timed out. The server may be slow or unreachable.';
       } else if (err.response?.data?.detail) {
         const serverDetail = err.response.data.detail;
         message = typeof serverDetail === 'string' ? serverDetail : JSON.stringify(serverDetail);
+      } else if (err.response?.status) {
+        message = `Request failed (${err.response.status}). ${err.message || ''}`;
       } else if (err.message) {
         message = err.message;
       }

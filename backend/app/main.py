@@ -86,7 +86,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-# Routes first
+# CORS must be added early so preflight OPTIONS requests are handled
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+# Routes
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(workspaces.router, prefix="/api/workspaces", tags=["Workspaces"])
 app.include_router(forms.router, prefix="/api/expense-forms", tags=["Expense Forms"])
@@ -134,15 +144,6 @@ async def log_requests(request: Request, call_next):
         logger.error(f"Error message: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
 
 @app.middleware("http")
 async def add_cors_logging(request: Request, call_next):

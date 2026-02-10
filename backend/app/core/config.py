@@ -1,6 +1,15 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from pydantic import field_validator
+from typing import Optional, Union
+
+def _parse_cors_origins(v: Union[list[str], str]) -> list[str]:
+    """Parse CORS origins from env: support list or comma-separated string (e.g. on Render)."""
+    if isinstance(v, list):
+        return [x.strip() for x in v if x and isinstance(x, str)]
+    if isinstance(v, str):
+        return [x.strip() for x in v.split(",") if x.strip()]
+    return []
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Panacée Financial Management"
@@ -18,7 +27,7 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: str = "hachllersocials@gmail.com"
     EMAILS_FROM_NAME: str = "Panacée FinSys"
     
-    # CORS
+    # CORS: list or comma-separated string from env (e.g. Render)
     BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://localhost:3001",
@@ -33,7 +42,16 @@ class Settings(BaseSettings):
         "http://0.0.0.0:3002",
         "http://0.0.0.0:5173",
         "https://panace-web.onrender.com",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
     ]
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[list[str], str]) -> list[str]:
+        return _parse_cors_origins(v) if v else []
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -1,19 +1,27 @@
-
 import axios from 'axios';
 
-const getApiBaseUrl = () => {
+const getApiBaseUrl = (): string => {
     try {
-        return (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000/api';
-    } catch (e) {
+        const env = (import.meta as any).env;
+        // In dev, use relative /api so Vite proxy sends same-origin requests (no CORS)
+        if (env?.DEV) {
+            return '/api';
+        }
+        const url = env?.VITE_API_BASE_URL || 'http://localhost:8000/api';
+        return typeof url === 'string' ? url.replace(/\/+$/, '') : 'http://localhost:8000/api';
+    } catch {
         return 'http://localhost:8000/api';
     }
 };
 
-const API_BASE_URL = getApiBaseUrl();
-console.log("🚀 API Base URL:", API_BASE_URL);
+export const API_BASE_URL = getApiBaseUrl();
 
 const api = axios.create({
     baseURL: API_BASE_URL,
+    timeout: 20000,
+    headers: {
+        'Accept': 'application/json',
+    },
 });
 
 const getAuthHeader = () => {
@@ -47,7 +55,11 @@ api.interceptors.response.use(
             try {
                 const refreshToken = localStorage.getItem('refreshToken');
                 if (refreshToken) {
-                    const response = await axios.post(`${API_BASE_URL}/auth/refresh?refresh_token=${refreshToken}`);
+                    const response = await axios.post(
+                        `${API_BASE_URL}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`,
+                        null,
+                        { timeout: 10000 }
+                    );
                     const { access_token } = response.data;
                     localStorage.setItem('token', access_token);
                     api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
