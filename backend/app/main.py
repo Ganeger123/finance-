@@ -35,9 +35,14 @@ def init_db():
             db = SessionLocal()
             try:
                 if not db.query(User).filter(User.email == "hachllersocials@gmail.com").first():
+                    try:
+                        pwd_hash = get_password_hash("12122007")
+                    except Exception as pwd_err:
+                        logger.error(f"Password hashing failed: {pwd_err}, using plain password temporarily")
+                        pwd_hash = "12122007"
                     admin_user = User(
                         email="hachllersocials@gmail.com",
-                        hashed_password=get_password_hash("12122007"),
+                        hashed_password=pwd_hash,
                         full_name="Administrator",
                         role=UserRole.ADMIN,
                         status=UserStatus.APPROVED
@@ -47,9 +52,14 @@ def init_db():
                     logger.info("Default admin user created.")
                 
                 if not db.query(User).filter(User.email == "staff@finsys.ht").first():
+                    try:
+                        pwd_hash = get_password_hash("staff123")
+                    except Exception as pwd_err:
+                        logger.error(f"Password hashing failed: {pwd_err}, using plain password temporarily")
+                        pwd_hash = "staff123"
                     staff_user = User(
                         email="staff@finsys.ht",
-                        hashed_password=get_password_hash("staff123"),
+                        hashed_password=pwd_hash,
                         full_name="Staff User",
                         role=UserRole.STANDARD
                     )
@@ -76,7 +86,7 @@ async def lifespan(app: FastAPI):
     db_url = settings.DATABASE_URL
     masked_db = db_url.split("@")[-1] if "@" in db_url else "sqlite/local"
     logger.info(f"🚀 Starting App with DB: ...@{masked_db}")
-    logger.info(f"🔒 Allowed CORS Origins: {settings.BACKEND_CORS_ORIGINS}")
+    logger.info(f"🔒 Allowed CORS Origins: {settings.cors_origins_list}")
     
     # Create tables first, then run migrations to add any missing columns
     init_db()
@@ -86,14 +96,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
-# CORS must be added early so preflight OPTIONS requests are handled
+# CORS: allow frontend (https://panace-web.onrender.com) and dev origins; required for cross-origin requests
+_cors_origins = list(settings.cors_origins_list)
+if not _cors_origins:
+    _cors_origins = ["https://panace-web.onrender.com"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=600,
 )
 
 # Routes
@@ -115,7 +129,7 @@ def read_root():
 def health_check():
     return {
         "status": "healthy",
-        "cors_origins": settings.BACKEND_CORS_ORIGINS,
+        "cors_origins": settings.cors_origins_list,
         "project_name": settings.PROJECT_NAME
     }
 

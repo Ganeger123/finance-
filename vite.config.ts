@@ -9,15 +9,28 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
-        // Proxy /api to backend in dev so there's no CORS (same-origin requests)
-        proxy: isDev
-          ? {
-              '/api': {
-                target: 'http://localhost:8000',
-                changeOrigin: true,
-              },
-            }
-          : undefined,
+         // Proxy /api to backend in dev so there's no CORS (same-origin requests)
+         proxy: isDev
+           ? {
+               '/api': {
+                 target: 'http://localhost:8000',
+                 changeOrigin: true,
+                 // Don't proxy TypeScript files or static assets
+                 bypass: (req, res, options) => {
+                   // Don't proxy if it's a file request (has extension)
+                   if (/\.[a-z]+(\?.*)?$/i.test(req.url)) {
+                     return false;
+                   }
+                   // Don't proxy preflight OPTIONS requests for HMR
+                   if (req.method === 'OPTIONS') {
+                     return false;
+                   }
+                   // Proxy everything else that starts with /api
+                   return null;
+                 }
+               },
+             }
+           : undefined,
       },
       plugins: [react()],
       define: {

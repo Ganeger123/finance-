@@ -7,6 +7,11 @@ const getApiBaseUrl = (): string => {
         if (env?.DEV) {
             return '/api';
         }
+        // Runtime fallback: if we're on Render frontend, always point to Render API (works even if build-time env was wrong)
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        if (origin === 'https://panace-web.onrender.com') {
+            return 'https://panace-api.onrender.com/api';
+        }
         const url = env?.VITE_API_BASE_URL || 'http://localhost:8000/api';
         return typeof url === 'string' ? url.replace(/\/+$/, '') : 'http://localhost:8000/api';
     } catch {
@@ -14,11 +19,15 @@ const getApiBaseUrl = (): string => {
     }
 };
 
+// Re-resolve base URL on each access so runtime fallback (e.g. Render) works after hydration
+export function getAPIBaseURL(): string {
+    return getApiBaseUrl();
+}
 export const API_BASE_URL = getApiBaseUrl();
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 20000,
+    timeout: 45000, // 45s to allow Render free-tier cold start (~30–60s)
     headers: {
         'Accept': 'application/json',
     },
@@ -32,6 +41,8 @@ const getAuthHeader = () => {
 // Add a request interceptor to include the JWT token in all requests
 api.interceptors.request.use(
     (config) => {
+        // Use current base URL in case it was resolved at runtime (e.g. Render)
+        config.baseURL = getApiBaseUrl();
         try {
             const token = localStorage.getItem('token');
             if (token) {
@@ -45,10 +56,28 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Add a response interceptor to handle token refresh
+// Add a response interceptor to handle token refresh and log network errors
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
+        // Log exact cause for debugging (CORS, connection refused, timeout, etc.)
+        console.error('Axios Error Code:', error.code);
+        console.error('Axios Config URL:', error.config?.baseURL, error.config?.url);
+        if (error.message) console.error('Axios Message:', error.message);
+        
+        // Additional debugging info for network errors
+        if (error.code === 'ERR_NETWORK') {
+            console.error('🔴 NETWORK ERROR DETECTED:');
+            console.error('  - Backend URL:', error.config?.baseURL);
+            console.error('  - Endpoint:', error.config?.url);
+            console.error('  - This likely means the backend server is not running or not accessible');
+            console.error('  - Check:', {
+                'Backend running on :8000': 'http://localhost:8000/docs',
+                'Frontend proxy configured': 'vite.config.ts',
+                'CORS headers present': 'check browser DevTools Network tab'
+            });
+        }
+
         const originalRequest = error.config;
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
@@ -56,9 +85,9 @@ api.interceptors.response.use(
                 const refreshToken = localStorage.getItem('refreshToken');
                 if (refreshToken) {
                     const response = await axios.post(
-                        `${API_BASE_URL}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`,
+                        `${getApiBaseUrl()}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`,
                         null,
-                        { timeout: 10000 }
+                        { timeout: 15000 }
                     );
                     const { access_token } = response.data;
                     localStorage.setItem('token', access_token);

@@ -22,6 +22,7 @@ import { financeApi, authApi } from './api';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | undefined>(undefined);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -128,33 +129,42 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
     const restoreSession = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const response = await authApi.getMe();
-          const userData = response.data;
-          setUser({
-            id: userData.id.toString(),
-            full_name: userData.full_name || userData.email.split('@')[0],
-            email: userData.email,
-            role: userData.role,
-            status: userData.status
-          });
-
-          if (userData.status === 'REJECTED') {
-            localStorage.removeItem('token');
-            localStorage.removeItem('refreshToken');
-            setUser(null);
-          }
-        } catch (error) {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setSessionChecked(true);
+          return;
+        }
+        const response = await authApi.getMe();
+        if (cancelled) return;
+        const userData = response.data;
+        setUser({
+          id: userData.id.toString(),
+          full_name: userData.full_name || userData.email.split('@')[0],
+          email: userData.email,
+          role: userData.role,
+          status: userData.status
+        });
+        if (userData.status === 'REJECTED') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          setUser(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
           console.error("Session restoration failed", error);
           localStorage.removeItem('token');
           localStorage.removeItem('refreshToken');
+          setUser(null);
         }
+      } finally {
+        if (!cancelled) setSessionChecked(true);
       }
     };
     restoreSession();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -170,6 +180,14 @@ const App: React.FC = () => {
     }
   }, [user, currentPage]);
 
+  // Always show something: brief loading, then Login or app
+  if (!sessionChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-main)]">
+        <div className="text-slate-500 font-medium">Loading…</div>
+      </div>
+    );
+  }
   if (!user || (user.status === 'PENDING' && user.role !== 'ADMIN')) {
     return <Login onLogin={setUser} />;
   }

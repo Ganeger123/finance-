@@ -96,19 +96,27 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
     } catch (err: any) {
       console.error('Login error detail:', err);
+      console.error('Axios Error Code:', err.code);
+      console.error('Axios Config URL:', err.config?.baseURL, err.config?.url);
+      console.error('Error Response:', err.response?.status, err.response?.data);
 
       let message = 'Une erreur est survenue.';
 
-      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
-        const apiUrl = (import.meta as any).env?.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
-        message = `Cannot reach the server. Check that the backend is running at ${apiUrl} and CORS allows this origin.`;
+      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
+        const isRender = typeof window !== 'undefined' && window.location.hostname.includes('onrender.com');
+        const apiUrl = err.config?.baseURL || 'backend server';
+        message = isRender
+          ? `Cannot reach the server at ${apiUrl}. On free hosting the backend may be waking up—wait 30–60 seconds and try again.`
+          : `Cannot reach the server at ${apiUrl}. Ensure the backend is running on port 8000 and is accessible from your browser.`;
       } else if (err.code === 'ECONNABORTED') {
-        message = 'Request timed out. The server may be slow or unreachable.';
+        message = 'Request timed out. The server may be starting up—wait a moment and try again.';
       } else if (err.response?.data?.detail) {
         const serverDetail = err.response.data.detail;
         message = typeof serverDetail === 'string' ? serverDetail : JSON.stringify(serverDetail);
+      } else if (err.response?.status === 401) {
+        message = 'Invalid email or password. Please try again.';
       } else if (err.response?.status) {
-        message = `Request failed (${err.response.status}). ${err.message || ''}`;
+        message = `Request failed (${err.response.status}). ${err.message || 'Please try again.'}`;
       } else if (err.message) {
         message = err.message;
       }
@@ -244,7 +252,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 </div>
               </div>
 
-              {error && <div className="p-4 bg-red-50 text-red-600 text-xs font-bold rounded-2xl border border-red-100 animate-in shake">{error}</div>}
+              {error && (
+                <div className="p-4 bg-red-50 text-red-600 text-xs font-bold rounded-2xl border border-red-100 animate-in shake space-y-2">
+                  <p>{error}</p>
+                  {(error.includes('waking up') || error.includes('try again') || error.includes('timed out')) && (
+                    <p className="text-slate-500 font-medium">Click &quot;Sign In&quot; again to retry.</p>
+                  )}
+                </div>
+              )}
               {success && <div className="p-4 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-2xl border border-emerald-100 animate-in zoom-in">{success}</div>}
 
               <button

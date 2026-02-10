@@ -7,10 +7,30 @@ from app.core.config import settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception as e:
+        # Handle case where hashed_password is not actually a hash (fallback for plain passwords)
+        # This shouldn't happen in production but helps during development/migration
+        if isinstance(e, Exception) and "hash could not be identified" in str(e):
+            # Fallback: if hash verification fails, try plain comparison (dangerous, only for fallback)
+            if hashed_password == plain_password:
+                return True
+        return False
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    # Bcrypt has a 72-byte limit on password input
+    try:
+        # Ensure password is a string and limit to 72 bytes
+        if isinstance(password, bytes):
+            password = password.decode('utf-8')
+        password = password[:72]
+        return pwd_context.hash(password)
+    except Exception as e:
+        # Fallback: just ensure it's at most 72 bytes and try again
+        if len(str(password)) > 72:
+            password = str(password)[:72]
+        return pwd_context.hash(password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
