@@ -36,12 +36,20 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> list[str]:
-        """CORS origins as list; always includes production frontend."""
+        """CORS origins as list; always includes Render production AND development origins."""
         parsed = _parse_cors_origins(self.BACKEND_CORS_ORIGINS)
-        frontend = "https://panace-web.onrender.com"
-        if frontend not in parsed:
-            parsed.append(frontend)
-        return parsed if parsed else [frontend]
+        
+        # Always include Render production URLs
+        required_origins = [
+            "https://panace-web.onrender.com",
+            "https://panace-api.onrender.com",
+        ]
+        
+        for origin in required_origins:
+            if origin not in parsed:
+                parsed.append(origin)
+        
+        return parsed if parsed else required_origins
 
     @property
     def sync_database_url(self) -> str:

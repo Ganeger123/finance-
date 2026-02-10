@@ -99,7 +99,11 @@ app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 # CORS: allow frontend (https://panace-web.onrender.com) and dev origins; required for cross-origin requests
 _cors_origins = list(settings.cors_origins_list)
 if not _cors_origins:
-    _cors_origins = ["https://panace-web.onrender.com"]
+    _cors_origins = ["https://panace-web.onrender.com", "https://panace-api.onrender.com"]
+
+logger.info(f"🔒 CORS Middleware configured with origins: {_cors_origins}")
+
+# Add CORS middleware FIRST so it properly handles preflight requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -107,7 +111,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
-    max_age=600,
+    max_age=3600,  # Increased from 600 to 3600s
 )
 
 # Routes

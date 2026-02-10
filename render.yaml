@@ -4,7 +4,7 @@ services:
     rootDirectory: backend
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level info
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -17,13 +17,7 @@ services:
       - key: EMAILS_FROM_EMAIL
         value: hachllersocials@gmail.com
       - key: BACKEND_CORS_ORIGINS
-        value: https://panace-web.onrender.com,http://localhost:5173,http://127.0.0.1:5173
-
-  - type: web
-    name: panace-web
-    env: static
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
+        value: https://panace-web.onrender.com,https://panace-api.onrender.com,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000
     routes:
       - type: rewrite
         source: /*
