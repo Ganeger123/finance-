@@ -79,28 +79,29 @@ api.interceptors.response.use(
         }
 
         const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
-            try {
-                const refreshToken = localStorage.getItem('refreshToken');
-                if (refreshToken) {
-                    const response = await axios.post(
-                        `${getApiBaseUrl()}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`,
-                        null,
-                        { timeout: 15000 }
-                    );
-                    const { access_token } = response.data;
-                    localStorage.setItem('token', access_token);
-                    api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-                    return api(originalRequest);
-                }
-            } catch (refreshError) {
-                // Refresh token expired or invalid
-                localStorage.removeItem('token');
-                localStorage.removeItem('refreshToken');
-                window.location.href = '/login';
-            }
-        }
+        // LOGIN DISABLED - 401 interceptor disabled for testing
+        // if (error.response?.status === 401 && !originalRequest._retry) {
+        //     originalRequest._retry = true;
+        //     try {
+        //         const refreshToken = localStorage.getItem('refreshToken');
+        //         if (refreshToken) {
+        //             const response = await axios.post(
+        //                 `${getApiBaseUrl()}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`,
+        //                 null,
+        //                 { timeout: 15000 }
+        //             );
+        //             const { access_token } = response.data;
+        //             localStorage.setItem('token', access_token);
+        //             api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+        //             return api(originalRequest);
+        //         }
+        //     } catch (refreshError) {
+        //         // Refresh token expired or invalid
+        //         localStorage.removeItem('token');
+        //         localStorage.removeItem('refreshToken');
+        //         window.location.href = '/login';
+        //     }
+        // }
         return Promise.reject(error);
     }
 );

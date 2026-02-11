@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, Transaction } from './types';
 import { INITIAL_TRANSACTIONS } from './mockData';
-import Login from './pages/Login';
+// LOGIN DISABLED - will be re-added later
+// import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
 import Income from './pages/Income';
@@ -20,9 +21,18 @@ import { Workspace } from './types';
 
 import { financeApi, authApi } from './apiClient';
 
+// MOCK USER - LOGIN DISABLED FOR TESTING
+const MOCK_USER: User = {
+  id: '1',
+  full_name: 'Test User',
+  email: 'test@example.com',
+  role: 'super_admin',
+  status: 'approved'
+};
+
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [sessionChecked, setSessionChecked] = useState(false);
+  const [user, setUser] = useState<User>(MOCK_USER);
+  const [sessionChecked, setSessionChecked] = useState(true);
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | undefined>(undefined);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -128,44 +138,15 @@ const App: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    let cancelled = false;
-    const restoreSession = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setSessionChecked(true);
-          return;
-        }
-        const response = await authApi.getMe();
-        if (cancelled) return;
-        const userData = response.data;
-        setUser({
-          id: userData.id.toString(),
-          full_name: userData.full_name || userData.email.split('@')[0],
-          email: userData.email,
-          role: userData.role,
-          status: userData.status
-        });
-        if (userData.status === 'rejected') {
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          setUser(null);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Session restoration failed", error);
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          setUser(null);
-        }
-      } finally {
-        if (!cancelled) setSessionChecked(true);
-      }
-    };
-    restoreSession();
-    return () => { cancelled = true; };
-  }, []);
+  // LOGIN DISABLED - Using mock user for testing
+  // useEffect(() => {
+  //   let cancelled = false;
+  //   const restoreSession = async () => {
+  //     // Session restoration disabled
+  //   };
+  //   restoreSession();
+  //   return () => { cancelled = true; };
+  // }, []);
 
   useEffect(() => {
     if (user) {
@@ -180,17 +161,7 @@ const App: React.FC = () => {
     }
   }, [user, currentPage]);
 
-  // Always show something: brief loading, then Login or app
-  if (!sessionChecked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-main)]">
-        <div className="text-slate-500 font-medium">Loading…</div>
-      </div>
-    );
-  }
-  if (!user || (user.status === 'pending' && user.role !== 'admin' && user.role !== 'super_admin')) {
-    return <Login onLogin={setUser} />;
-  }
+  // LOGIN DISABLED - Always show app with mock user
 
   const handleAddTransaction = () => {
     fetchTransactions(); // Refresh data after adding
@@ -249,9 +220,8 @@ const App: React.FC = () => {
         activePage={currentPage}
         onNavigate={setCurrentPage}
         onLogout={() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          setUser(null);
+          // LOGIN DISABLED - Logout not functional in test mode
+          console.log('Logout called - login disabled for testing');
         }}
         userName={user.full_name || 'User'}
         isOpen={isSidebarOpen}

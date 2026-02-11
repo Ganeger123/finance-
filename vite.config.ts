@@ -7,9 +7,14 @@ export default defineConfig(({ mode }) => {
     const isDev = mode === 'development';
     return {
       server: {
-        port: 3000,
+        port: 3001,
         host: '0.0.0.0',
         middlewareMode: false,
+        hmr: {
+          protocol: 'ws',
+          host: 'localhost',
+          port: 3001,
+        },
          // Proxy /api to backend in dev so there's no CORS (same-origin requests)
          proxy: isDev
            ? {
