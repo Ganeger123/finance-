@@ -18,7 +18,7 @@ import Reports from './pages/Reports';
 import InstallPWA from './components/InstallPWA';
 import { Workspace } from './types';
 
-import { financeApi, authApi } from './api';
+import { financeApi, authApi } from './apiClient';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);

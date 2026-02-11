@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Workspace, ExpenseForm, ExpenseField } from '../types';
-import { financeApi } from '../api';
+import { financeApi } from '../apiClient';
 
 interface FormBuilderProps {
     workspace: Workspace;

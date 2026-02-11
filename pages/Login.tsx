@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, UserStatus } from '../types';
-import { authApi } from '../api';
+import { authApi } from '../apiClient';
 import { useLanguage } from '../context/LanguageContext';
 
 interface LoginProps {

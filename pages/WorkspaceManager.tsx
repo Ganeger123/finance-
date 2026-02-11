@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Workspace } from '../types';
-import { financeApi } from '../api';
+import { financeApi } from '../apiClient';
 import { useLanguage } from '../context/LanguageContext';
 
 interface WorkspaceManagerProps {

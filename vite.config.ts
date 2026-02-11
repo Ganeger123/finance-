@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        middlewareMode: false,
          // Proxy /api to backend in dev so there's no CORS (same-origin requests)
          proxy: isDev
            ? {
@@ -31,6 +32,10 @@ export default defineConfig(({ mode }) => {
                },
              }
            : undefined,
+      },
+      build: {
+        // Disable source maps
+        sourcemap: false,
       },
       plugins: [react()],
       define: {

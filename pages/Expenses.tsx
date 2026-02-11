@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Transaction, ExpenseCategory, Workspace } from '../types';
 import { formatHTG } from '../constants';
-import { financeApi } from '../api';
+import { financeApi } from '../apiClient';
 import { useLanguage } from '../context/LanguageContext';
 
 interface ExpensesProps {

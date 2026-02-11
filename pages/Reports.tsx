@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { financeApi } from '../api';
+import { financeApi } from '../apiClient';
 import { User } from '../types';
 import { formatHTG } from '../constants';
 import { useLanguage } from '../context/LanguageContext';

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Transaction, IncomeType, FeeType, Workspace } from '../types';
 import { formatHTG, formatGourdesShort } from '../constants';
-import { financeApi } from '../api';
+import { financeApi } from '../apiClient';
 import { useLanguage } from '../context/LanguageContext';
 
 interface IncomeProps {

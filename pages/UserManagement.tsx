@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Role } from '../types';
-import { financeApi } from '../api';
+import { financeApi } from '../apiClient';
 import { useLanguage } from '../context/LanguageContext';
 
 const StatusBadge: React.FC<{ lastSeen?: string }> = ({ lastSeen }) => {

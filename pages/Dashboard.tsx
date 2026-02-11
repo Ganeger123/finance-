@@ -11,7 +11,7 @@ import html2canvas from 'html2canvas';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
-import { financeApi } from '../api';
+import { financeApi } from '../apiClient';
 
 interface DashboardProps {
   transactions: Transaction[];

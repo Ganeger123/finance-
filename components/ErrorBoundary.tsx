@@ -15,7 +15,6 @@ interface State {
 
 class ErrorBoundary extends Component<Props, State> {
     public state: State;
-    public props: Props;
 
     constructor(props: Props) {
         super(props);
@@ -53,7 +52,7 @@ class ErrorBoundary extends Component<Props, State> {
                         <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 12 }}>
                             Failed to load:
                             <ul style={{ marginTop: 6 }}>
-                                {this.state.resourceErrors.map((r) => <li key={r}>{r}</li>)}
+                                {this.state.resourceErrors.map((r, idx) => <li key={`${r}-${idx}`}>{r}</li>)}
                             </ul>
                         </div>
                     )}
@@ -71,7 +70,7 @@ class ErrorBoundary extends Component<Props, State> {
     }
 
     // Render the styled fallback inside a try/catch so we never return a blank page
-    public render() {
+    public render(): React.ReactNode {
         if (this.state.hasError) {
             console.error('ErrorBoundary caught:', this.state.error);
 
@@ -84,7 +83,7 @@ class ErrorBoundary extends Component<Props, State> {
                                 {!this.state.imageFailed && (
                                     <div className="flex-shrink-0">
                                         <img
-                                            src="/panacee-logo.png"
+                                            src="/pwa_icon_512.png"
                                             alt="Panacée Logo"
                                             className="w-28 h-28 object-contain"
                                             onError={this.handleImageError}
@@ -113,8 +112,8 @@ class ErrorBoundary extends Component<Props, State> {
                                         <div className="mb-4 text-sm text-red-500">
                                             Failed to load resource(s):
                                             <ul className="list-disc list-inside text-xs text-red-400">
-                                                {this.state.resourceErrors.map((r) => (
-                                                    <li key={r}>{r}</li>
+                                                {this.state.resourceErrors.map((r, idx) => (
+                                                    <li key={`${r}-${idx}`}>{r}</li>
                                                 ))}
                                             </ul>
                                         </div>
@@ -155,7 +154,7 @@ class ErrorBoundary extends Component<Props, State> {
             }
         }
 
-        return (this.props as any).children;
+        return this.props.children;
     }
 
     public componentDidMount() {
@@ -183,7 +182,7 @@ class ErrorBoundary extends Component<Props, State> {
     };
 
     private handleImageError = () => {
-        this.setState((s) => ({ imageFailed: true, resourceErrors: Array.from(new Set([...s.resourceErrors, '/panacee-logo.png'])) }));
+        this.setState((s) => ({ imageFailed: true, resourceErrors: Array.from(new Set([...s.resourceErrors, '/pwa_icon_512.png'])) }));
     };
 }
 
