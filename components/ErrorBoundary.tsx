@@ -182,7 +182,7 @@ class ErrorBoundary extends Component<Props, State> {
     };
 
     private handleImageError = () => {
-        this.setState((s) => ({ imageFailed: true, resourceErrors: Array.from(new Set([...s.resourceErrors, '/pwa_icon_512.png'])) }));
+        this.setState((s) => ({ imageFailed: true, resourceErrors: Array.from(new Set([...s.resourceErrors, '/panacee-logo.png'])) }));
     };
 }
 
