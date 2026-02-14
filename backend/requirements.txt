@@ -1,15 +1,12 @@
 fastapi
-uvicorn[standard]
+uvicorn
 sqlalchemy
-psycopg2-binary
-alembic
-pydantic[email]
-pydantic-settings
-python-jose[cryptography]
-passlib[bcrypt]
-gunicorn
-python-multipart
 python-dotenv
-bcrypt
-reportlab
-slowapi
+pydantic
+pydantic-settings
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart
+# Database driver
+# Using sqlite for now as per db.js, but including psycopg2 just in case
+# psycopg2-binary 

@@ -1,0 +1,13 @@
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from ..database import Base
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String, nullable=True)
+    amount = Column(Float, nullable=False)
+    category = Column(String, nullable=True)
+    type = Column(String, nullable=True) # "income" or "expense"
+    date = Column(String, nullable=True) # SQLite stores dates as strings usually, matching JS "TEXT"
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
