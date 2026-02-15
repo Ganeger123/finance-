@@ -22,7 +22,7 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
         </svg>
       ),
-      adminOnly: true
+      adminOnly: false
     },
     {
       id: 'rentrees',
@@ -64,9 +64,29 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
       ),
       adminOnly: false
     },
+    {
+      id: 'workspaces',
+      label: 'Espaces',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+      adminOnly: false
+    },
   ];
 
   const supportItems = [
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ),
+      adminOnly: false
+    },
     {
       id: 'settings',
       label: 'Paramètres',
@@ -88,6 +108,13 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
       ),
       adminOnly: false
     },
+  ];
+
+  const adminMenuItems = [
+    { id: 'admin-dashboard', label: 'Activity Logs', adminOnly: true, href: null },
+    { id: 'admin-settings', label: 'Admin Settings', adminOnly: true, href: null },
+    { id: 'admin-support', label: 'Support Tickets', adminOnly: true, href: null },
+    { id: 'admin-new', label: 'Admin Dashboard (new)', adminOnly: true, href: '/admin' },
   ];
 
   const handleNavigate = (id: string) => {
@@ -147,6 +174,52 @@ const Sidebar: React.FC<SidebarProps & { isOpen?: boolean; onClose?: () => void 
               })}
             </nav>
           </div>
+
+          {/* Admin Section (only for admin / super_admin) */}
+          {(role === 'admin' || role === 'super_admin') && (
+            <div>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 px-2 italic">ADMIN</p>
+              <nav className="space-y-1">
+                {adminMenuItems.map((item) => {
+                  const isActive = activePage === item.id;
+                  const href = (item as { href?: string }).href;
+                  if (href) {
+                    return (
+                      <a
+                        key={item.id}
+                        href={href}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-800/50"
+                      >
+                        <span className="opacity-60">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                        </span>
+                        <span className="tracking-tight">{item.label}</span>
+                      </a>
+                    );
+                  }
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavigate(item.id)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 ${isActive
+                        ? 'bg-[#10b981] text-white shadow-lg shadow-emerald-500/20'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                        }`}
+                    >
+                      <span className={isActive ? 'opacity-100' : 'opacity-60'}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </span>
+                      <span className="tracking-tight">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
 
           {/* Support Section */}
           <div>

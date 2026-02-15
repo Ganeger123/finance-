@@ -42,6 +42,9 @@ ENV/
 *.sqlite
 *.sqlite3
 finance.db
+backend_django/db.sqlite3
+backend_django/**/__pycache__/
+backend_django/**/*.pyc
 
 # Editor directories and files
 .vscode/*

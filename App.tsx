@@ -16,6 +16,11 @@ import CustomExpenseEntry from './pages/CustomExpenseEntry';
 import UserManagement from './pages/UserManagement';
 import Vendors from './pages/Vendors';
 import Reports from './pages/Reports';
+import AdminActivityDashboard from './pages/AdminActivityDashboard';
+import AdminSettings from './pages/AdminSettings';
+import AdminSupport from './pages/AdminSupport';
+import Notifications from './pages/Notifications';
+import Help from './pages/Help';
 import InstallPWA from './components/InstallPWA';
 import { Workspace } from './types';
 
@@ -54,53 +59,61 @@ const App: React.FC = () => {
     try {
       const params = selectedWorkspace ? { workspace_id: selectedWorkspace.id } : {};
 
-      // Standard fetches
-      const fetchPromises: [Promise<any>, Promise<any>, Promise<any>?] = [
-        financeApi.getExpenses(params),
-        financeApi.getIncomes(params)
-      ];
+      // Fetch expenses and income; tolerate 401/500 and use empty arrays
+      let expensesData: any[] = [];
+      let incomeData: any[] = [];
+      let formsData: any[] = [];
 
-      // Only fetch forms if a workspace is selected
+      try {
+        const expensesRes = await financeApi.getExpenses(params);
+        expensesData = Array.isArray(expensesRes?.data) ? expensesRes.data : [];
+      } catch (e) {
+        console.warn("Failed to fetch expenses", e);
+      }
+      try {
+        const incomeRes = await financeApi.getIncomes(params);
+        incomeData = Array.isArray(incomeRes?.data) ? incomeRes.data : [];
+      } catch (e) {
+        console.warn("Failed to fetch income", e);
+      }
       if (selectedWorkspace) {
-        fetchPromises.push(financeApi.getForms(selectedWorkspace.id));
+        try {
+          const formsRes = await financeApi.getForms(selectedWorkspace.id);
+          formsData = Array.isArray(formsRes?.data) ? formsRes.data : [];
+        } catch (e) {
+          console.warn("Failed to fetch forms", e);
+        }
       }
 
-      const responses = await Promise.all(fetchPromises);
-      const expensesRes = responses[0];
-      const incomeRes = responses[1];
-      const formsRes = responses[2];
-
       let mappedCustomExpenses: any[] = [];
-
-      // Only process forms and entries if they exist
-      if (formsRes && formsRes.data) {
+      if (formsData.length > 0) {
         try {
-          const entryPromises = formsRes.data.map((f: any) => financeApi.getEntries(f.id));
-          const entriesResponses = await Promise.all(entryPromises);
+          const entryPromises = formsData.map((f: any) => financeApi.getEntries(f.id));
+          const entriesResponses = await Promise.allSettled(entryPromises);
 
-          entriesResponses.forEach((res, index) => {
-            const form = formsRes.data[index];
+          entriesResponses.forEach((result, index) => {
+            if (result.status !== 'fulfilled' || !result.value?.data) return;
+            const form = formsData[index];
+            if (!form?.fields) return;
             const amountFields = form.fields.filter((f: any) =>
-              ['montant', 'amount', 'prix', 'total'].includes(f.label.toLowerCase())
+              ['montant', 'amount', 'prix', 'total'].includes((f.label || '').toLowerCase())
             );
-
-            res.data.forEach((entry: any) => {
+            (result.value.data as any[]).forEach((entry: any) => {
               let amount = 0;
               for (const f of amountFields) {
-                const val = entry.data[f.id];
-                if (val) {
+                const val = entry.data?.[f.id];
+                if (val != null) {
                   amount = parseFloat(val) || 0;
                   break;
                 }
               }
-
               mappedCustomExpenses.push({
                 id: `entry-${entry.id}`,
-                date: entry.created_at.split('T')[0],
+                date: (entry.created_at || '').split('T')[0],
                 type: 'EXPENSE',
                 category: form.name,
                 amount: amount,
-                comment: Object.entries(entry.data).map(([k, v]) => `${k}: ${v}`).join(', ')
+                comment: entry.data ? Object.entries(entry.data).map(([k, v]) => `${k}: ${v}`).join(', ') : ''
               });
             });
           });
@@ -109,30 +122,31 @@ const App: React.FC = () => {
         }
       }
 
-      const mappedExpenses = expensesRes.data.map((ex: any) => ({
-        id: ex.id.toString(),
-        date: ex.date.split('T')[0],
+      const mappedExpenses = expensesData.map((ex: any) => ({
+        id: String(ex.id),
+        date: (ex.date || '').split('T')[0] || ex.date,
         type: 'EXPENSE',
         category: ex.category || 'AUTRE',
         amount: Number(ex.amount) || 0,
         comment: ex.comment || ''
       }));
 
-      const mappedIncomes = incomeRes.data.map((inc: any) => ({
-        id: inc.id.toString(),
-        date: inc.date.split('T')[0],
+      const mappedIncomes = incomeData.map((inc: any) => ({
+        id: String(inc.id),
+        date: (inc.date || '').split('T')[0] || inc.date,
         type: 'INCOME',
         category: inc.type || 'FORMATION',
         subType: inc.subtype || '',
         amount: Number(inc.amount) || 0,
         studentCount: Number(inc.student_count) || 0,
-        comment: inc.student_count > 0 ? `${inc.student_count} étudiants` : ''
+        comment: (inc.student_count > 0 ? `${inc.student_count} étudiants` : '') || inc.comment || ''
       }));
 
       const allTransactions = [...mappedExpenses, ...mappedIncomes, ...mappedCustomExpenses];
-      setTransactions(allTransactions.sort((a, b) => b.date.localeCompare(a.date)));
+      setTransactions(allTransactions.sort((a, b) => (b.date || '').localeCompare(a.date || '')));
     } catch (error) {
       console.error("Failed to fetch transactions", error);
+      setTransactions([]);
     } finally {
       setIsLoading(false);
     }
@@ -154,12 +168,16 @@ const App: React.FC = () => {
     }
   }, [user, selectedWorkspace]);
 
-  // Simple route guard
+  // No redirect: all users can see Tableau de Bord and Rentrées
+
+  // Admin-only route guard: redirect non-admins away from admin pages
+  const adminPages = ['admin-dashboard', 'admin-settings', 'admin-support'];
+  const isAdmin = user && (user.role === 'admin' || user.role === 'super_admin');
   useEffect(() => {
-    if (user && user.role !== 'admin' && user.role !== 'super_admin' && currentPage === 'dashboard') {
-      setCurrentPage('expenses');
+    if (user && adminPages.includes(currentPage) && !isAdmin) {
+      setCurrentPage('dashboard');
     }
-  }, [user, currentPage]);
+  }, [user, currentPage, isAdmin]);
 
   // LOGIN DISABLED - Always show app with mock user
 
@@ -174,6 +192,7 @@ const App: React.FC = () => {
       case 'expenses':
         return <Expenses transactions={transactions} onAdd={handleAddTransaction} selectedWorkspace={selectedWorkspace} role={user.role} />;
       case 'income':
+      case 'rentrees':
         return <Income transactions={transactions} onAdd={handleAddTransaction} selectedWorkspace={selectedWorkspace} role={user.role} />;
       case 'search':
         return <Search transactions={transactions} />;
@@ -191,6 +210,16 @@ const App: React.FC = () => {
         return <Reports user={user} />;
       case 'custom-expenses':
         return selectedWorkspace ? <CustomExpenseEntry workspace={selectedWorkspace} role={user.role} onAdd={handleAddTransaction} /> : <WorkspaceManager onSelect={setSelectedWorkspace} />;
+      case 'admin-dashboard':
+        return <AdminActivityDashboard />;
+      case 'admin-settings':
+        return <AdminSettings />;
+      case 'admin-support':
+        return <AdminSupport />;
+      case 'notifications':
+        return <Notifications />;
+      case 'help':
+        return <Help />;
       default:
         return <Dashboard transactions={transactions} />;
     }

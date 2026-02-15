@@ -15,9 +15,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [theme, setTheme] = useState<Theme>(() => {
         try {
             const saved = localStorage.getItem('theme');
-            return (saved === 'dark' || saved === 'light' ? saved : 'light') as Theme;
+            return (saved === 'dark' || saved === 'light' ? saved : 'dark') as Theme;
         } catch {
-            return 'light';
+            return 'dark';
         }
     });
 

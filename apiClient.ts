@@ -112,8 +112,36 @@ export const authApi = {
             'Content-Type': 'application/x-www-form-urlencoded'
         }
     }),
+    logout: () => api.post('/auth/logout'),
     register: (userData: any) => api.post('/auth/register', userData),
     getMe: () => api.get('/auth/me'),
+    passwordChange: (data: { old_password: string; new_password: string }) => api.post('/auth/password-change', data),
+    passwordReset: (email: string) => api.post('/auth/password-reset', { email }),
+};
+
+/** Form submission tracking (logs + notifies admin). */
+export const formSubmitApi = {
+    submit: (formName: string, dataSummary: string | object) =>
+        api.post('/form-submit', { form_name: formName, data_summary: dataSummary }),
+};
+
+/** Admin-only API (RBAC: requires admin or super_admin). */
+export const adminApi = {
+    getActivityLogs: (params?: { page?: number; page_size?: number; action?: string; status?: string; user_id?: string }) =>
+        api.get('/admin/activity-logs', { params }),
+    exportActivityLogs: (format: 'csv' = 'csv') =>
+        api.get('/admin/activity-logs/export', { params: { format }, responseType: 'blob' }),
+    getFormLogs: (params?: { page?: number; page_size?: number }) =>
+        api.get('/admin/form-logs', { params }),
+    getSupportTickets: (params?: { page?: number; page_size?: number; status?: string }) =>
+        api.get('/admin/support-tickets', { params }),
+    respondSupportTicket: (ticketId: number, data: { admin_reply?: string; status?: string }) =>
+        api.post(`/admin/support-tickets/${ticketId}/respond`, data),
+    getSettings: () => api.get('/admin/settings'),
+    updateSettings: (data: { email_alerts_enabled?: string; password_min_length?: string; ADMIN_EMAIL?: string }) =>
+        api.post('/admin/settings', data),
+    getUsers: () => api.get('/admin/users'),
+    lockUser: (userId: number, lock: boolean) => api.post(`/admin/users/${userId}/lock`, { lock }),
 };
 
 export const financeApi = {
@@ -161,6 +189,16 @@ export const financeApi = {
     createVendor: (data: any) => api.post('/vendors/', data),
     updateVendor: (id: number, data: any) => api.put(`/vendors/${id}`, data),
     deleteVendor: (id: number) => api.delete(`/vendors/${id}`),
+};
+
+/** Support: any authenticated user can create a ticket. */
+export const supportApi = {
+    createTicket: (message: string) => api.post('/support-tickets', { message }),
+};
+
+/** Notifications: recent activity for current user. */
+export const notificationsApi = {
+    getNotifications: (params?: { limit?: number }) => api.get('/notifications/', { params }),
 };
 
 export default api;

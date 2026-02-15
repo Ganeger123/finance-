@@ -1,8 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App';
+import AdminRoutes from './routes/AdminRoutes';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { ToastProvider } from './context/ToastContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const rootElement = document.getElementById('root');
@@ -15,9 +18,16 @@ root.render(
   <React.StrictMode>
     <ErrorBoundary>
       <ThemeProvider>
-        <LanguageProvider>
-          <App />
-        </LanguageProvider>
+        <ToastProvider>
+          <LanguageProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/admin/*" element={<AdminRoutes />} />
+                <Route path="*" element={<App />} />
+              </Routes>
+            </BrowserRouter>
+          </LanguageProvider>
+        </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>
   </React.StrictMode>
