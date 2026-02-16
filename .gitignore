@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Environment variables - NEVER commit these!
+.env
+.env.local
+.env.*.local
+.env.production
+backend_django/.env
+backend_django/.env.production
+
 # Python
 __pycache__/
 *.py[cod]
