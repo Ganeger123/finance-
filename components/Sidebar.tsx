@@ -34,11 +34,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { t } = useLanguage();
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'expenses', label: 'Expenses', icon: Receipt },
-    { id: 'income', label: 'Income', icon: TrendingUp },
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
+    { id: 'expenses', label: t('expenses'), icon: Receipt },
+    { id: 'income', label: t('income'), icon: TrendingUp },
+    { id: 'reports', label: t('reports'), icon: BarChart3 },
+    { id: 'settings', label: t('settings'), icon: Settings },
   ];
 
   const handleNavigate = (id: string) => {
@@ -103,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Admin Section */}
         {(role === 'admin' || role === 'super_admin') && (
           <div className="mt-6 pt-6 border-t border-white/5 space-y-1">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-4">Admin Control</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-4">{t('admin_control')}</p>
             <button
               onClick={() => handleNavigate('admin-dashboard')}
               className={`
@@ -112,7 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 `}
             >
               <Settings className={`w-5 h-5 ${activePage === 'admin-dashboard' ? 'text-indigo-400' : ''}`} />
-              <span className="text-sm font-semibold">Admin Console</span>
+              <span className="text-sm font-semibold">{t('admin_console')}</span>
             </button>
             <button
               onClick={() => handleNavigate('users')}
@@ -122,7 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 `}
             >
               <UserCircle className={`w-5 h-5 ${activePage === 'users' ? 'text-indigo-400' : ''}`} />
-              <span className="text-sm font-semibold">User Mgt</span>
+              <span className="text-sm font-semibold">{t('user_mgt')}</span>
             </button>
           </div>
         )}
@@ -136,7 +136,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-rose-500/20 transition-colors">
               <LogOut className="w-4 h-4 group-hover:text-rose-400 transition-colors" />
             </div>
-            <span className="text-sm font-bold tracking-tight">Sign Out</span>
+            <span className="text-sm font-bold tracking-tight">{t('logout')}</span>
             <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
               <ChevronRight className="w-4 h-4 text-slate-500" />
             </div>

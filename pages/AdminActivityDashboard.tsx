@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { formatHTG } from '../constants';
 
 interface ActivityLogRecord {
   id: number;
@@ -38,6 +40,7 @@ interface SystemStats {
 
 export default function AdminActivityDashboard() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [logs, setLogs] = useState<ActivityLogRecord[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [total, setTotal] = useState(0);
@@ -119,9 +122,9 @@ export default function AdminActivityDashboard() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-[0.2em] mb-3 border border-rose-100">
-            System Monitoring
+            {t('platform_insights')}
           </div>
-          <h2 className="text-4xl font-black text-slate-800 tracking-tighter">Admin Console</h2>
+          <h2 className="text-4xl font-black text-slate-800 tracking-tighter">{t('admin_console')}</h2>
           <p className="text-slate-500 font-medium mt-1">Real-time system health and security auditing.</p>
         </div>
         <div className="flex gap-3">
@@ -137,7 +140,7 @@ export default function AdminActivityDashboard() {
             className="px-6 py-4 bg-[#374b91] text-white font-black rounded-2xl flex items-center gap-2 hover:bg-[#202a54] transition-all active:scale-95 shadow-xl shadow-indigo-100 uppercase tracking-widest text-xs disabled:opacity-50"
           >
             <Download className="w-5 h-5" />
-            <span>{exporting ? 'Exporting...' : 'Export Audit Log'}</span>
+            <span>{exporting ? t('generating') : t('export_logs')}</span>
           </button>
         </div>
       </header>
@@ -145,27 +148,27 @@ export default function AdminActivityDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Active Sessions"
+          title={t('active_sessions')}
           value={stats?.active_sessions_24h || 0}
           icon={Clock}
           color="border-l-indigo-500"
-          trend="Live"
+          trend={t('active')}
         />
         <StatCard
-          title="Total Users"
+          title={t('total_users')}
           value={stats?.total_users || 0}
           icon={Users}
           color="border-l-emerald-500"
         />
         <StatCard
-          title="Pending Approvals"
+          title={t('pending_approvals')}
           value={stats?.pending_approvals || 0}
           icon={ShieldAlert}
           color="border-l-amber-500"
         />
         <StatCard
-          title="Total Volume"
-          value={`$${(stats?.total_volume || 0).toLocaleString()}`}
+          title={t('total_volume')}
+          value={formatHTG(stats?.total_volume || 0)}
           icon={DollarSign}
           color="border-l-blue-500"
         />
@@ -177,7 +180,7 @@ export default function AdminActivityDashboard() {
             <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center">
               <Activity className="w-5 h-5 text-slate-600" />
             </div>
-            <h3 className="text-xl font-bold text-slate-800 tracking-tight">System Audit Trail</h3>
+            <h3 className="text-xl font-bold text-slate-800 tracking-tight">{t('system_audit')}</h3>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -248,8 +251,8 @@ export default function AdminActivityDashboard() {
                   </td>
                   <td className="px-8 py-6">
                     <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${log.status === 'Success'
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                        : 'bg-rose-50 text-rose-600 border-rose-100'
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      : 'bg-rose-50 text-rose-600 border-rose-100'
                       }`}>
                       {log.status}
                     </span>

@@ -8,6 +8,7 @@ import {
 import StatCard from '../components/StatCard';
 import { financeApi } from '../apiClient';
 import { ArrowUpRight, ArrowDownRight, Calendar, ChevronRight, Activity, Clock } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -20,6 +21,7 @@ const DASHBOARD_COLORS = {
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
+  const { t } = useLanguage();
   const [selectedYear] = React.useState(new Date().getFullYear());
   const [dashboardData, setDashboardData] = React.useState<{
     total_income: number;
@@ -70,28 +72,28 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
       {/* Summary Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Total Balance"
+          title={t('total_balance')}
           value={formatHTG(net)}
           accentColor="turquoise"
           footer={<div className="h-1.5 w-full bg-accent-turquoise/20 rounded-full overflow-hidden"><div className="h-full bg-accent-turquoise" style={{ width: '70%' }}></div></div>}
         />
         <StatCard
-          title="Monthly Income"
+          title={t('monthly_income')}
           value={formatHTG(totals.income)}
           accentColor="blue"
-          footer={<div className="flex items-center gap-1 text-emerald-500 text-[10px] font-black uppercase tracking-widest"><ArrowUpRight className="w-3 h-3" /> Growth +12%</div>}
+          footer={<div className="flex items-center gap-1 text-emerald-500 text-[10px] font-black uppercase tracking-widest"><ArrowUpRight className="w-3 h-3" /> {t('growth')} +12%</div>}
         />
         <StatCard
-          title="Monthly Expenses"
+          title={t('monthly_expenses')}
           value={formatHTG(totals.expense)}
           accentColor="coral"
-          footer={<div className="flex items-center gap-1 text-rose-500 text-[10px] font-black uppercase tracking-widest"><ArrowDownRight className="w-3 h-3" /> Reduced -4%</div>}
+          footer={<div className="flex items-center gap-1 text-rose-500 text-[10px] font-black uppercase tracking-widest"><ArrowDownRight className="w-3 h-3" /> {t('reduced')} -4%</div>}
         />
         <StatCard
-          title="Budget Left"
+          title={t('budget_left')}
           value={formatHTG(budgetLeft)}
           accentColor="green"
-          footer={<div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Safe to Spend</div>}
+          footer={<div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">{t('safe_to_spend')}</div>}
         />
       </div>
 
@@ -102,15 +104,15 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
           <div className="fintrack-card p-10">
             <div className="flex items-center justify-between mb-10">
               <h3 className="font-black text-slate-800 tracking-tight flex items-center gap-3 text-lg">
-                Financial Overview
-                <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-md uppercase tracking-widest">Active</span>
+                {t('financial_overview')}
+                <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-md uppercase tracking-widest">{t('active')}</span>
               </h3>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase">
-                  <div className="w-2 h-2 rounded-full bg-[#374b91]"></div> Income
+                  <div className="w-2 h-2 rounded-full bg-[#374b91]"></div> {t('income')}
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase">
-                  <div className="w-2 h-2 rounded-full bg-accent-turquoise"></div> Expenses
+                  <div className="w-2 h-2 rounded-full bg-accent-turquoise"></div> {t('expenses')}
                 </div>
               </div>
             </div>
@@ -146,7 +148,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {/* Expense Breakdown (Donut) */}
             <div className="fintrack-card p-8">
-              <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Expenses by Category</h4>
+              <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-8">{t('expense_allocation')}</h4>
               <div className="h-[200px] relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -167,7 +169,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Spent</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('spent')}</span>
                   <span className="text-xl font-black text-slate-800">100%</span>
                 </div>
               </div>
@@ -189,14 +191,14 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl"></div>
               <div>
                 <Activity className="w-8 h-8 text-accent-turquoise mb-6" />
-                <h4 className="text-xl font-black tracking-tight mb-2">Platform Insights</h4>
+                <h4 className="text-xl font-black tracking-tight mb-2">{t('platform_insights')}</h4>
                 <p className="text-slate-400 text-xs font-medium leading-relaxed">
                   Your monthly saving rate is up by 15%. Keep track of your bills to avoid late fees.
                 </p>
               </div>
               <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Health</span>
-                <span className="text-emerald-400 text-[10px] font-black uppercase">Optimal</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('system_health')}</span>
+                <span className="text-emerald-400 text-[10px] font-black uppercase">{t('optimal')}</span>
               </div>
             </div>
           </div>
@@ -206,8 +208,8 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
         <div className="lg:col-span-4 space-y-10">
           <div className="fintrack-card p-8">
             <div className="flex items-center justify-between mb-8">
-              <h3 className="font-black text-slate-800 tracking-tight text-sm uppercase tracking-widest">Activity</h3>
-              <button className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline">See all</button>
+              <h3 className="font-black text-slate-800 tracking-tight text-sm uppercase tracking-widest">{t('activity')}</h3>
+              <button className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:underline">{t('see_all')}</button>
             </div>
 
             <div className="space-y-6">
@@ -234,7 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
 
           <div className="fintrack-card p-8">
             <div className="flex items-center justify-between mb-8">
-              <h3 className="font-black text-slate-800 tracking-tight text-sm uppercase tracking-widest">Upcoming Bills</h3>
+              <h3 className="font-black text-slate-800 tracking-tight text-sm uppercase tracking-widest">{t('upcoming_bills')}</h3>
               <Clock className="w-4 h-4 text-slate-300" />
             </div>
 
@@ -259,7 +261,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
                 </div>
               ))}
               <button className="w-full py-4 mt-2 border-2 border-dashed border-slate-100 rounded-3xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-indigo-200 hover:text-indigo-400 transition-all">
-                Add Reminder +
+                {t('add_reminder')} +
               </button>
             </div>
           </div>

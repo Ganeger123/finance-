@@ -9,6 +9,7 @@ import Search from './pages/Search';
 import Settings from './pages/Settings';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import { useLanguage } from './context/LanguageContext';
 import Modal from './components/Modal';
 import TransactionForm from './components/TransactionForm';
 import WorkspaceManager from './pages/WorkspaceManager';
@@ -28,6 +29,7 @@ import FinBot from './components/FinBot';
 import { financeApi, authApi } from './apiClient';
 
 const App: React.FC = () => {
+  const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
@@ -238,10 +240,10 @@ const App: React.FC = () => {
     setShowAddExpense(false);
     setShowAddIncome(false);
 
-    const title = type === 'EXPENSE' ? 'Dépense enregistrée' : 'Revenu enregistré';
+    const title = type === 'EXPENSE' ? t('expense_saved_title') : t('income_saved_title');
     const body = type === 'EXPENSE'
-      ? 'Votre nouvelle dépense a été ajoutée avec succès.'
-      : 'Votre nouveau revenu a été ajouté avec succès.';
+      ? t('expense_saved_body')
+      : t('income_saved_body');
     triggerNotification(title, body);
   };
 
