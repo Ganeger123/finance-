@@ -2,6 +2,7 @@
 services:
   - type: web
     name: panace-api
+    runtime: python
     rootDir: backend
     plan: free
     buildCommand: pip install -r requirements.txt
