@@ -7,6 +7,4 @@ pydantic-settings
 passlib[bcrypt]
 python-jose[cryptography]
 python-multipart
-# Database driver
-# Using sqlite for now as per db.js, but including psycopg2 just in case
-# psycopg2-binary 
+psycopg2-binary
