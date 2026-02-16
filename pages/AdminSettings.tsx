@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../apiClient';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function AdminSettings() {
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [settings, setSettings] = useState<{ email_alerts_enabled?: string; password_min_length?: string; ADMIN_EMAIL?: string }>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,12 +41,12 @@ export default function AdminSettings() {
   const isDark = theme === 'dark';
 
   if (loading) {
-    return <div className="p-6 text-slate-500">Loading settings…</div>;
+    return <div className="p-6 text-slate-500">{t('generating')}</div>;
   }
 
   return (
     <div className={`rounded-2xl border ${isDark ? 'bg-slate-900/50 border-slate-700' : 'bg-white border-slate-200'} shadow-sm p-6 max-w-2xl`}>
-      <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Admin Settings</h1>
+      <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-6">{t('settings')}</h1>
 
       {message && (
         <div className="mb-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
@@ -107,7 +109,7 @@ export default function AdminSettings() {
           disabled={saving}
           className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 disabled:opacity-50"
         >
-          {saving ? 'Saving…' : 'Save settings'}
+          {saving ? t('saving') : t('save')}
         </button>
       </div>
     </div>
