@@ -65,6 +65,26 @@ api.interceptors.response.use(
         console.error('Axios Config URL:', error.config?.baseURL, error.config?.url);
         if (error.message) console.error('Axios Message:', error.message);
         
+        // Log error to backend (non-blocking, fire and forget)
+        try {
+            const errorData = {
+                error_message: error.message || 'Unknown error',
+                error_stack: error.stack || '',
+                endpoint: error.config?.url || '',
+                status_code: error.response?.status || null,
+                details: error.response?.data?.detail || JSON.stringify(error.response?.data || {}),
+            };
+            const token = localStorage.getItem('token');
+            axios.post(`${getApiBaseUrl()}/error-log`, errorData, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                timeout: 5000,
+            }).catch(() => {
+                // Silently ignore logging failures
+            });
+        } catch {
+            // Ignore error logging failures
+        }
+        
         // Additional debugging info for network errors
         if (error.code === 'ERR_NETWORK') {
             console.error('🔴 NETWORK ERROR DETECTED:');
@@ -133,6 +153,8 @@ export const adminApi = {
         api.get('/admin/activity-logs/export', { params: { format }, responseType: 'blob' }),
     getFormLogs: (params?: { page?: number; page_size?: number }) =>
         api.get('/admin/form-logs', { params }),
+    getErrorLogs: (params?: { page?: number; page_size?: number }) =>
+        api.get('/admin/error-logs', { params }),
     getSupportTickets: (params?: { page?: number; page_size?: number; status?: string }) =>
         api.get('/admin/support-tickets', { params }),
     respondSupportTicket: (ticketId: number, data: { admin_reply?: string; status?: string }) =>
@@ -148,11 +170,13 @@ export const financeApi = {
     getExpenses: (params?: any) => api.get('/expenses/', { params }),
     getCategories: () => api.get('/expenses/categories'),
     createExpense: (expense: any) => api.post('/expenses/', expense),
-    deleteExpense: (id: number) => api.delete(`/expenses/${id}`),
+    updateExpense: (id: number, expense: any) => api.put(`/expenses/${id}/`, expense),
+    deleteExpense: (id: number) => api.delete(`/expenses/${id}/`),
 
     getIncomes: (params?: any) => api.get('/income/', { params }),
     createIncome: (income: any) => api.post('/income/', income),
-    deleteIncome: (id: number) => api.delete(`/income/${id}`),
+    updateIncome: (id: number, income: any) => api.put(`/income/${id}/`, income),
+    deleteIncome: (id: number) => api.delete(`/income/${id}/`),
 
     getDashboardSummary: (year?: number) => api.get('/dashboard/summary', { params: { year } }),
 

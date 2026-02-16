@@ -18,7 +18,10 @@ from .services import (
     send_alert_to_admin,
     count_recent_failed_logins,
 )
-from .models import ActivityLog, FormLog, Workspace, ExpenseForm, ExpenseField, ExpenseEntry, Expense, Income
+from .models import (
+    User, ActivityLog, FormLog, ErrorLog, Workspace, ExpenseForm, 
+    ExpenseField, ExpenseEntry, Expense, Income
+)
 from .rate_limit import check_rate_limit, incr_rate_limit
 
 def _user_to_json(user):
@@ -330,7 +333,7 @@ def expenses_view(request):
     return JsonResponse(out)
 
 
-@require_http_methods(["DELETE"])
+@require_http_methods(["DELETE", "PUT", "PATCH"])
 @csrf_exempt
 def expense_delete(request, expense_id):
     user, err = _require_auth(request)
@@ -339,7 +342,45 @@ def expense_delete(request, expense_id):
     obj = Expense.objects.filter(id=expense_id, user_id=user.id).first()
     if not obj:
         return JsonResponse({"detail": "Not found"}, status=404)
+    
+    if request.method in ("PUT", "PATCH"):
+        # Update expense
+        try:
+            data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "Invalid JSON"}, status=400)
+        
+        if "category" in data:
+            obj.category = (data.get("category") or "").strip() or obj.category
+        if "amount" in data:
+            try:
+                obj.amount = float(data.get("amount"))
+            except (TypeError, ValueError):
+                return JsonResponse({"detail": "Invalid amount"}, status=400)
+        if "comment" in data:
+            obj.comment = (data.get("comment") or "").strip()
+        if "date" in data:
+            try:
+                from datetime import datetime
+                obj.date = datetime.strptime(data.get("date", "")[:10], "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                pass  # Keep existing date if invalid
+        
+        obj.save()
+        log_activity(user.id, user.email, user.full_name or '', 'UPDATE', request, details=f'Updated expense {expense_id}')
+        
+        return JsonResponse({
+            "id": obj.id,
+            "category": obj.category,
+            "amount": float(obj.amount),
+            "comment": obj.comment,
+            "date": obj.date.isoformat(),
+            "created_at": obj.created_at.isoformat(),
+        }, status=200)
+    
+    # DELETE
     obj.delete()
+    log_activity(user.id, user.email, user.full_name or '', 'DELETE', request, details=f'Deleted expense {expense_id}')
     return JsonResponse({"message": "Deleted"})
 
 
@@ -413,7 +454,7 @@ def income_view(request):
     return JsonResponse(out)
 
 
-@require_http_methods(["DELETE"])
+@require_http_methods(["DELETE", "PUT", "PATCH"])
 @csrf_exempt
 def income_delete(request, income_id):
     user, err = _require_auth(request)
@@ -422,7 +463,54 @@ def income_delete(request, income_id):
     obj = Income.objects.filter(id=income_id, user_id=user.id).first()
     if not obj:
         return JsonResponse({"detail": "Not found"}, status=404)
+    
+    if request.method in ("PUT", "PATCH"):
+        # Update income
+        try:
+            data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "Invalid JSON"}, status=400)
+        
+        if "type" in data:
+            obj.type = (data.get("type") or "").strip() or obj.type
+        if "subtype" in data:
+            obj.subtype = (data.get("subtype") or "").strip()
+        if "amount" in data:
+            try:
+                obj.amount = float(data.get("amount"))
+            except (TypeError, ValueError):
+                return JsonResponse({"detail": "Invalid amount"}, status=400)
+        if "student_count" in data:
+            try:
+                obj.student_count = int(data.get("student_count", 0) or 0)
+            except (TypeError, ValueError):
+                pass
+        if "comment" in data:
+            obj.comment = (data.get("comment") or "").strip()
+        if "date" in data:
+            try:
+                from datetime import datetime
+                obj.date = datetime.strptime(data.get("date", "")[:10], "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                pass  # Keep existing date if invalid
+        
+        obj.save()
+        log_activity(user.id, user.email, user.full_name or '', 'UPDATE', request, details=f'Updated income {income_id}')
+        
+        return JsonResponse({
+            "id": obj.id,
+            "type": obj.type,
+            "subtype": obj.subtype or "",
+            "amount": float(obj.amount),
+            "student_count": obj.student_count,
+            "comment": obj.comment,
+            "date": obj.date.isoformat(),
+            "created_at": obj.created_at.isoformat(),
+        }, status=200)
+    
+    # DELETE
     obj.delete()
+    log_activity(user.id, user.email, user.full_name or '', 'DELETE', request, details=f'Deleted income {income_id}')
     return JsonResponse({"message": "Deleted"})
 
 @require_http_methods(["GET", "POST"])
@@ -657,6 +745,49 @@ def form_submit(request):
         extra=f"Form: {form_name}\nSummary: {data_summary[:500]}",
     )
     return JsonResponse({"message": "Form submitted", "form_name": form_name})
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def error_log_create(request):
+    """Frontend error logging endpoint. Endpoint logs frontend errors without requiring auth."""
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    
+    user_id = None
+    user_email = ""
+    try:
+        token = request.META.get('HTTP_AUTHORIZATION', '').replace('Bearer ', '')
+        if token:
+            decoded = decode_token(token)
+            if decoded:
+                user_id = decoded.get('sub')
+                user = User.objects.filter(id=user_id).first()
+                user_email = user.email if user else ""
+    except:
+        pass  # If token decoding fails, still log the error with null user_id
+    
+    error_message = data.get("error_message", "Unknown error")[:1000]
+    error_stack = data.get("error_stack", "")[:5000]
+    endpoint = data.get("endpoint", "")[:500]
+    status_code = data.get("status_code")
+    details = data.get("details", "")[:1000]
+    
+    ErrorLog.objects.create(
+        user_id=user_id,
+        user_email=user_email,
+        error_message=error_message,
+        error_stack=error_stack,
+        endpoint=endpoint,
+        status_code=status_code,
+        details=details,
+        ip_address=get_client_ip(request),
+    )
+    
+    return JsonResponse({"message": "Error logged"}, status=201)
+
 
 
 @require_http_methods(["POST"])

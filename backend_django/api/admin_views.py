@@ -7,7 +7,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.core.paginator import Paginator
 
-from .models import ActivityLog, FormLog, SupportTicket, AdminSettings, User
+from .models import ActivityLog, FormLog, SupportTicket, AdminSettings, User, ErrorLog
 from .views import _get_user_from_request
 from .services import get_client_ip, get_user_agent, log_activity, send_alert_to_admin
 
@@ -98,6 +98,38 @@ def form_logs_list(request):
             "form_name": log.form_name,
             "data_summary": log.data_summary,
             "submitted_at": log.submitted_at.isoformat() if log.submitted_at else None,
+        }
+        for log in page_obj
+    ]
+    return JsonResponse({
+        "logs": items,
+        "total": paginator.count,
+        "page": page,
+        "page_size": page_size,
+    })
+
+
+@require_http_methods(["GET"])
+@require_admin
+def error_logs_list(request):
+    """List frontend error logs."""
+    page = int(request.GET.get("page", 1))
+    page_size = min(int(request.GET.get("page_size", 20)), 100)
+    qs = ErrorLog.objects.all().order_by("-created_at")
+    paginator = Paginator(qs, page_size)
+    page_obj = paginator.get_page(page)
+    items = [
+        {
+            "id": log.id,
+            "user_id": log.user_id,
+            "user_email": log.user_email,
+            "error_message": log.error_message,
+            "error_stack": log.error_stack[:500] if log.error_stack else "",  # Truncate stack
+            "endpoint": log.endpoint,
+            "status_code": log.status_code,
+            "details": log.details,
+            "ip_address": str(log.ip_address) if log.ip_address else "",
+            "created_at": log.created_at.isoformat() if log.created_at else None,
         }
         for log in page_obj
     ]

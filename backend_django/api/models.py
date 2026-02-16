@@ -75,6 +75,26 @@ class FormLog(models.Model):
         ordering = ['-submitted_at']
 
 
+class ErrorLog(models.Model):
+    """Frontend error logs for monitoring and debugging."""
+    user_id = models.IntegerField(null=True, blank=True, db_index=True)
+    user_email = models.CharField(max_length=255, blank=True)
+    error_message = models.TextField()
+    error_stack = models.TextField(blank=True)
+    endpoint = models.CharField(max_length=500, blank=True)
+    status_code = models.IntegerField(null=True, blank=True)
+    details = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'error_logs'
+        ordering = ['-created_at']
+        verbose_name = 'Error Log'
+        verbose_name_plural = 'Error Logs'
+
+
+
 class SupportTicket(models.Model):
     STATUS_OPEN = 'open'
     STATUS_CLOSED = 'closed'

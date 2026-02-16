@@ -4,6 +4,7 @@ import { Transaction, ExpenseCategory, Workspace } from '../types';
 import { formatHTG } from '../constants';
 import { financeApi } from '../apiClient';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 
 interface ExpensesProps {
   transactions: Transaction[];
@@ -14,11 +15,14 @@ interface ExpensesProps {
 
 const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorkspace, role }) => {
   const { t } = useLanguage();
+  const { addToast } = useToast();
+  
   // Allow category to be string to support custom values
   const [formData, setFormData] = useState<{
     category: ExpenseCategory | string;
     amount: string;
     comment: string;
+    date: string;
   }>({
     category: ExpenseCategory.SALAIRE_FIXE,
     amount: '',
@@ -29,6 +33,7 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [availableCategories, setAvailableCategories] = useState<string[]>(Object.values(ExpenseCategory));
 
   const fetchCategories = async () => {
@@ -45,6 +50,25 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  const resetForm = () => {
+    setFormData({ category: ExpenseCategory.SALAIRE_FIXE, amount: '', comment: '', date: new Date().toISOString().split('T')[0] });
+    setCustomCategory('');
+    setEditingId(null);
+    setError('');
+  };
+
+  const handleEdit = (tx: Transaction) => {
+    setEditingId(Number(tx.id));
+    setFormData({
+      category: tx.category,
+      amount: String(tx.amount),
+      comment: tx.comment || '',
+      date: tx.date || new Date().toISOString().split('T')[0]
+    });
+    setCustomCategory('');
+    setError('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,18 +101,27 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
 
     setIsLoading(true);
     try {
-      await financeApi.createExpense({
+      const expenseData = {
         category: finalCategory,
         amount: amt,
         comment: formData.comment,
         date: formData.date,
         workspace_id: selectedWorkspace?.id
-      });
+      };
+
+      if (editingId) {
+        // Update existing expense
+        await financeApi.updateExpense(editingId, expenseData);
+        addToast('success', 'Dépense mise à jour avec succès !');
+      } else {
+        // Create new expense
+        await financeApi.createExpense(expenseData);
+        addToast('success', 'Dépense enregistrée !');
+      }
 
       onAdd({} as any); // Trigger refresh in parent
       setSuccess(true);
-      setFormData({ category: ExpenseCategory.SALAIRE_FIXE, amount: '', comment: '' });
-      setCustomCategory('');
+      resetForm();
       fetchCategories(); // Refresh list to include new custom category
 
       // Auto-hide success message
@@ -101,6 +134,7 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
       } else {
         setError('Erreur lors de l\'enregistrement de la dépense.');
       }
+      addToast('error', setError);
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -111,11 +145,15 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette dépense ?')) return;
 
     try {
+      setIsLoading(true);
       await financeApi.deleteExpense(parseInt(id));
+      addToast('success', 'Dépense supprimée');
       onAdd({} as any); // Trigger refresh
     } catch (err) {
       console.error("Failed to delete expense", err);
-      alert("Erreur lors de la suppression.");
+      addToast('error', 'Erreur lors de la suppression');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -134,16 +172,24 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
           <div className="inline-flex items-center gap-2 text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-widest mb-2 border border-emerald-100 dark:border-emerald-500/20">
             Internal Ledger
           </div>
-          <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{t('add_expense') || 'Dépenses'}</h2>
-          <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">Manage corporate spending with precision.</p>
+          <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{editingId ? 'Éditer la Dépense' : t('add_expense') || 'Dépenses'}</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">{editingId ? 'Modifiez les détails de la dépense.' : 'Manage corporate spending with precision.'}</p>
         </div>
+        {editingId && (
+          <button
+            onClick={resetForm}
+            className="px-6 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-semibold rounded-xl transition-all"
+          >
+            Annuler l'édition
+          </button>
+        )}
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         {/* Form Column */}
         <div className="lg:col-span-5">
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
-            <h3 className="font-black text-slate-800 dark:text-white tracking-tight mb-6 uppercase text-xs tracking-widest text-slate-400">Nouvelle Dépense</h3>
+            <h3 className="font-black text-slate-800 dark:text-white tracking-tight mb-6 uppercase text-xs tracking-widest text-slate-400">{editingId ? 'Éditer la Dépense' : 'Nouvelle Dépense'}</h3>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{t('category')}</label>
@@ -213,14 +259,23 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
               </div>
 
               {error && <div className="p-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold rounded-2xl border border-red-100 dark:border-red-500/20 animate-in shake">{error}</div>}
-              {success && <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-2xl border border-emerald-100 dark:border-emerald-500/20 animate-in zoom-in">Dépense enregistrée!</div>}
+              {success && <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-2xl border border-emerald-100 dark:border-emerald-500/20 animate-in zoom-in">{editingId ? 'Dépense mise à jour!' : 'Dépense enregistrée!'}</div>}
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-5 bg-[#131b2e] dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 text-white font-black rounded-2xl transition-all active:scale-[0.98] shadow-xl shadow-slate-200 dark:shadow-none uppercase tracking-widest text-xs"
+                className="w-full py-5 bg-[#131b2e] dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 text-white font-black rounded-2xl transition-all active:scale-[0.98] shadow-xl shadow-slate-200 dark:shadow-none uppercase tracking-widest text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isLoading ? 'Chagement...' : t('save')}
+                {isLoading ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    Traitement...
+                  </>
+                ) : editingId ? (
+                  '✓ Mettre à Jour'
+                ) : (
+                  t('save')
+                )}
               </button>
             </form>
           </div>
@@ -231,7 +286,7 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 flex justify-between items-end mb-4">
               <div>
-                <h3 className="font-black text-slate-800 dark:text-white tracking-tight uppercase text-xs tracking-widest text-slate-400">Historique des Dépenses</h3>
+                <h3 className="font-black text-slate-800 dark:text-white tracking-tight uppercase text-xs tracking-widest text-slate-400">Historique des Dépenses </h3>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Derniers flux de sortie</p>
               </div>
               <span className="text-[10px] font-black px-3 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg uppercase tracking-widest">{expenseHistory.length} logs</span>
@@ -240,7 +295,7 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
             <div className="px-4 pb-4 space-y-3 max-h-[600px] overflow-y-auto no-scrollbar">
               {expenseHistory.map(tx => (
                 <div key={tx.id} className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl group hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-700 transition-all duration-300">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#fef2f2] text-red-600">
                       <span className="text-lg">↓</span>
                     </div>
@@ -250,18 +305,29 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
                       {tx.comment && <p className="text-[11px] text-slate-500 dark:text-slate-400 italic mt-1 line-clamp-1">{tx.comment}</p>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3">
                     <div className="text-sm font-black tracking-tight text-red-600">
                       -{formatHTG(tx.amount)}
                     </div>
                     {(role === 'admin' || role === 'super_admin') && (
-                      <button
-                        onClick={() => handleDelete(tx.id)}
-                        className="text-slate-300 hover:text-red-500 transition-colors"
-                        title="Delete"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button
+                          onClick={() => handleEdit(tx)}
+                          className="text-slate-400 hover:text-blue-500 transition-colors p-1"
+                          title="Edit"
+                          disabled={isLoading}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(tx.id)}
+                          className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                          title="Delete"
+                          disabled={isLoading}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
