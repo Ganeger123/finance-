@@ -6,6 +6,12 @@
     "env": {
         "VITE_API_BASE_URL": "@vite_api_base_url"
     },
+    "rewrites": [
+        {
+            "source": "/:path((?!api|_next|_static|public|favicon\\.ico|manifest\\.json|sw\\.js).*)",
+            "destination": "/index.html"
+        }
+    ],
     "headers": [
         {
             "source": "/(.*)",
@@ -15,6 +21,17 @@
                     "value": "public, max-age=3600, s-maxage=3600"
                 }
             ]
+        },
+        {
+            "source": "/",
+            "headers": [
+                {
+                    "key": "Content-Type",
+                    "value": "text/html; charset=utf-8"
+                }
+            ]
         }
-    ]
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false
 }
