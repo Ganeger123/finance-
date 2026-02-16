@@ -111,6 +111,8 @@ def form_logs_list(request):
 
 @require_http_methods(["GET"])
 @require_admin
+@require_http_methods(["GET"])
+@require_admin
 def error_logs_list(request):
     """List frontend error logs."""
     page = int(request.GET.get("page", 1))

@@ -4,6 +4,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
 import AdminUsersPage from '../pages/admin/AdminUsersPage';
 import AdminActivityPage from '../pages/admin/AdminActivityPage';
+import AdminErrorLogsPage from '../pages/admin/AdminErrorLogsPage';
 import AdminFormsPage from '../pages/admin/AdminFormsPage';
 import AdminSupportPage from '../pages/admin/AdminSupportPage';
 import AdminSettingsPage from '../pages/admin/AdminSettingsPage';
@@ -15,6 +16,7 @@ export default function AdminRoutes() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="activity" element={<AdminActivityPage />} />
+        <Route path="errors" element={<AdminErrorLogsPage />} />
         <Route path="forms" element={<AdminFormsPage />} />
         <Route path="support" element={<AdminSupportPage />} />
         <Route path="settings" element={<AdminSettingsPage />} />
@@ -23,3 +25,4 @@ export default function AdminRoutes() {
     </Routes>
   );
 }
+

@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Users,
   ScrollText,
+  AlertTriangle,
   FileText,
   Headphones,
   Settings,
@@ -15,6 +16,7 @@ const navItems: { path: string; label: string; icon: typeof LayoutDashboard }[] 
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/users', label: 'Users', icon: Users },
   { path: '/admin/activity', label: 'Activity Logs', icon: ScrollText },
+  { path: '/admin/errors', label: 'Error Logs', icon: AlertTriangle },
   { path: '/admin/forms', label: 'Forms', icon: FileText },
   { path: '/admin/support', label: 'Support', icon: Headphones },
   { path: '/admin/settings', label: 'Settings', icon: Settings },
@@ -58,6 +60,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed, onLogout,
             type="button"
             onClick={() => navigate(path)}
             className={btn + ' ' + (isActive(path) ? active : inactive) + ' w-full'}
+            title={collapsed ? label : undefined}
           >
             <Icon className="h-5 w-5 shrink-0" />
             {!collapsed && <span>{label}</span>}
@@ -65,10 +68,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed, onLogout,
         ))}
       </nav>
       <div className="border-t border-slate-200 dark:border-slate-800 p-3">
+        <div className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 px-3 truncate">
+          {!collapsed ? (userName ? `${userName}` : 'User') : userName ? userName[0] : 'U'}
+        </div>
         <button
           type="button"
           onClick={onLogout}
           className={btn + ' w-full ' + inactive + ' text-red-600 dark:text-red-400 hover:bg-red-500/10'}
+          title="Logout"
         >
           <LogOut className="h-5 w-5 shrink-0" />
           {!collapsed && <span>Logout</span>}
@@ -77,3 +84,4 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed, onLogout,
     </aside>
   );
 };
+
