@@ -31,6 +31,7 @@ class User(AbstractUser):
     status = models.CharField(max_length=20, default='pending')
     token_version = models.IntegerField(default=1)
     is_locked = models.BooleanField(default=False)
+    profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
 
     class Meta:
         db_table = 'api_user'
@@ -212,3 +213,17 @@ class Income(models.Model):
     class Meta:
         db_table = 'income'
         ordering = ['-date', '-created_at']
+
+
+class Report(models.Model):
+    """History of generated financial reports."""
+    user_id = models.IntegerField(db_index=True)
+    year = models.IntegerField()
+    month = models.IntegerField()
+    file_path = models.CharField(max_length=500)
+    summary_data = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'reports'
+        ordering = ['-created_at']

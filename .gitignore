@@ -19,6 +19,9 @@ dist-ssr
 .env.production
 backend_django/.env
 backend_django/.env.production
+backend/media/
+backend/*.log
+backend/server_error*.log
 
 # Python
 __pycache__/

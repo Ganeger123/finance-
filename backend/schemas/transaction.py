@@ -7,6 +7,10 @@ class TransactionBase(BaseModel):
     category: Optional[str] = None
     type: Optional[str] = None
     date: Optional[str] = None
+    comment: Optional[str] = None
+    workspace_id: Optional[int] = None
+    student_count: Optional[int] = None
+    subtype: Optional[str] = None
 
 class TransactionCreate(TransactionBase):
     pass

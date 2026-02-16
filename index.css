@@ -1,67 +1,82 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 :root {
-  /* Light Mode (Design Match) */
-  --bg-main: #fcfdfe;
+  /* FinTrack Design Tokens */
+  --bg-layout: #f5f7fa;
+  --bg-sidebar: linear-gradient(180deg, #374b91 0%, #202a54 100%);
+  --sidebar-active: rgba(255, 255, 255, 0.1);
+  --sidebar-text: #e2e8f0;
+
   --bg-card: #ffffff;
-  --bg-sidebar: #131b2e;
-  --accent-green: #10b981;
-  --accent-red: #ef4444;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
-  --border-color: #f1f5f9;
 
-  --shadow-card: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --primary-blue: #4f46e5;
+  --primary-blue-hover: #4338ca;
+
+  --accent-turquoise: #2dd4bf;
+  --accent-blue: #3b82f6;
+  --accent-coral: #fb7185;
+  --accent-green: #10b981;
+
+  --border-radius: 2rem;
+  --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
 .dark {
-  /* Dark Mode Adjustments */
-  --bg-main: #020617;
-  --bg-card: #0f172a;
-  --bg-sidebar: #0f172a;
+  --bg-layout: #0f172a;
+  --bg-sidebar: #1e293b;
+  --bg-card: #1e293b;
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
-  --border-color: #1e293b;
+  --sidebar-text: #94a3b8;
 }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg-main);
+  background-color: var(--bg-layout);
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
-  overflow-x: hidden;
+  margin: 0;
+  transition: background-color 0.3s ease;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-/* Custom Utilities */
-.glass-effect {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.dark .glass-effect {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
 }
 
-/* Recharts Customization */
-.recharts-cartesian-grid-horizontal line,
-.recharts-cartesian-grid-vertical line {
-  stroke: var(--border-color) !important;
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
 }
 
-.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background-color: #1e293b !important;
-  border: 1px solid #334155 !important;
-  color: #f8fafc !important;
+/* Card Styling */
+.fintrack-card {
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fintrack-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Sidebar Styling */
+.sidebar-gradient {
+  background: var(--bg-sidebar);
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -69,10 +84,7 @@ body {
   display: none;
 }
 
-/* Hide scrollbar for IE, Edge and Firefox */
 .no-scrollbar {
   -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
-  /* Firefox */
 }

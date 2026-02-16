@@ -64,7 +64,7 @@ api.interceptors.response.use(
         console.error('Axios Error Code:', error.code);
         console.error('Axios Config URL:', error.config?.baseURL, error.config?.url);
         if (error.message) console.error('Axios Message:', error.message);
-        
+
         // Log error to backend (non-blocking, fire and forget)
         try {
             const errorData = {
@@ -84,7 +84,7 @@ api.interceptors.response.use(
         } catch {
             // Ignore error logging failures
         }
-        
+
         // Additional debugging info for network errors
         if (error.code === 'ERR_NETWORK') {
             console.error('🔴 NETWORK ERROR DETECTED:');
@@ -99,29 +99,28 @@ api.interceptors.response.use(
         }
 
         const originalRequest = error.config;
-        // LOGIN DISABLED - 401 interceptor disabled for testing
-        // if (error.response?.status === 401 && !originalRequest._retry) {
-        //     originalRequest._retry = true;
-        //     try {
-        //         const refreshToken = localStorage.getItem('refreshToken');
-        //         if (refreshToken) {
-        //             const response = await axios.post(
-        //                 `${getApiBaseUrl()}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`,
-        //                 null,
-        //                 { timeout: 15000 }
-        //             );
-        //             const { access_token } = response.data;
-        //             localStorage.setItem('token', access_token);
-        //             api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-        //             return api(originalRequest);
-        //         }
-        //     } catch (refreshError) {
-        //         // Refresh token expired or invalid
-        //         localStorage.removeItem('token');
-        //         localStorage.removeItem('refreshToken');
-        //         window.location.href = '/login';
-        //     }
-        // }
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            try {
+                const refreshToken = localStorage.getItem('refreshToken');
+                if (refreshToken) {
+                    const response = await axios.post(
+                        `${getApiBaseUrl()}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`,
+                        null,
+                        { timeout: 15000 }
+                    );
+                    const { access_token } = response.data;
+                    localStorage.setItem('token', access_token);
+                    api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+                    return api(originalRequest);
+                }
+            } catch (refreshError) {
+                // Refresh token expired or invalid
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
+                if (typeof window !== 'undefined') window.location.href = '/login';
+            }
+        }
         return Promise.reject(error);
     }
 );
@@ -137,6 +136,10 @@ export const authApi = {
     getMe: () => api.get('/auth/me'),
     passwordChange: (data: { old_password: string; new_password: string }) => api.post('/auth/password-change', data),
     passwordReset: (email: string) => api.post('/auth/password-reset', { email }),
+    updateProfile: (data: { full_name: string }) => api.patch('/profile/update', data),
+    uploadPhoto: (formData: FormData) => api.post('/profile/photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
 };
 
 /** Form submission tracking (logs + notifies admin). */
@@ -147,23 +150,25 @@ export const formSubmitApi = {
 
 /** Admin-only API (RBAC: requires admin or super_admin). */
 export const adminApi = {
-    getActivityLogs: (params?: { page?: number; page_size?: number; action?: string; status?: string; user_id?: string }) =>
-        api.get('/admin/activity-logs', { params }),
+    getActivityLogs: (params?: any) =>
+        api.get('/admin/activity-logs/', { params }),
     exportActivityLogs: (format: 'csv' = 'csv') =>
-        api.get('/admin/activity-logs/export', { params: { format }, responseType: 'blob' }),
-    getFormLogs: (params?: { page?: number; page_size?: number }) =>
-        api.get('/admin/form-logs', { params }),
-    getErrorLogs: (params?: { page?: number; page_size?: number }) =>
-        api.get('/admin/error-logs', { params }),
-    getSupportTickets: (params?: { page?: number; page_size?: number; status?: string }) =>
-        api.get('/admin/support-tickets', { params }),
+        api.get('/admin/activity-logs/export/', { params: { format }, responseType: 'blob' }),
+    getFormLogs: (params?: any) =>
+        api.get('/admin/form-logs/', { params }),
+    getErrorLogs: (params?: any) =>
+        api.get('/admin/error-logs/', { params }),
+    getSupportTickets: (params?: any) =>
+        api.get('/admin/support-tickets/', { params }),
     respondSupportTicket: (ticketId: number, data: { admin_reply?: string; status?: string }) =>
-        api.post(`/admin/support-tickets/${ticketId}/respond`, data),
-    getSettings: () => api.get('/admin/settings'),
-    updateSettings: (data: { email_alerts_enabled?: string; password_min_length?: string; ADMIN_EMAIL?: string }) =>
-        api.post('/admin/settings', data),
-    getUsers: () => api.get('/admin/users'),
-    lockUser: (userId: number, lock: boolean) => api.post(`/admin/users/${userId}/lock`, { lock }),
+        api.post(`/admin/support-tickets/${ticketId}/respond/`, data),
+    getSystemStats: () => api.get('/admin/system-stats'),
+    getSettings: () => api.get('/admin/settings/'),
+    updateSettings: (data: any) => api.post('/admin/settings/', data),
+    getUsers: (status?: string) => api.get('/admin/users/', { params: { status } }),
+    approveUser: (userId: number) => api.post(`/admin/users/${userId}/approve`),
+    rejectUser: (userId: number) => api.post(`/admin/users/${userId}/reject`),
+    updateUserStatus: (userId: number, status: string) => api.patch(`/admin/users/${userId}/status`, { status }),
 };
 
 export const financeApi = {
@@ -188,41 +193,47 @@ export const financeApi = {
     // Workspaces
     getWorkspaces: () => api.get('/workspaces/'),
     createWorkspace: (data: any) => api.post('/workspaces/', data),
-    deleteWorkspace: (id: number) => api.delete(`/workspaces/${id}`),
+    deleteWorkspace: (id: number) => api.delete(`/workspaces/${id}/`),
 
     // Custom Form Builder
     getForms: (workspaceId: number) => api.get('/expense-forms/', { params: { workspace_id: workspaceId } }),
     createForm: (data: any) => api.post('/expense-forms/', data),
-    deleteForm: (formId: number) => api.delete(`/expense-forms/${formId}`),
-    getEntries: (formId: number) => api.get('/expense-forms/entries', { params: { form_id: formId } }),
-    createEntry: (data: any) => api.post('/expense-forms/entries', data),
-    deleteEntry: (id: number) => api.delete(`/expense-forms/entries/${id}`),
+    deleteForm: (formId: number) => api.delete(`/expense-forms/${formId}/`),
+    getEntries: (formId: number) => api.get('/expense-forms/entries/'),
+    createEntry: (data: any) => api.post('/expense-forms/entries/'),
+    deleteEntry: (id: number) => api.delete(`/expense-forms/entries/${id}/`),
 
     // User Management (Admin Only)
     getUsers: () => api.get('/users/'),
-    getPendingUsers: () => api.get('/users/pending'),
-    approveUser: (id: number) => api.post(`/users/${id}/approve`),
-    rejectUser: (id: number) => api.post(`/users/${id}/reject`),
-    deleteUser: (id: number) => api.delete(`/users/${id}`),
-    updateUser: (id: number, data: any) => api.patch(`/users/${id}`, data),
-    resetPassword: (id: number, data: any) => api.post(`/users/${id}/reset-password`, data),
-    logoutEverywhere: (id: number) => api.post(`/users/${id}/logout-everywhere`),
+    getPendingUsers: () => api.get('/users/pending/'),
+    approveUser: (id: number) => api.post(`/users/${id}/approve/`),
+    rejectUser: (id: number) => api.post(`/users/${id}/reject/`),
+    deleteUser: (id: number) => api.delete(`/users/${id}/`),
+    updateUser: (id: number, data: any) => api.patch(`/users/${id}/`, data),
+    resetPassword: (id: number, data: any) => api.post(`/users/${id}/reset-password/`, data),
+    logoutEverywhere: (id: number) => api.post(`/users/${id}/logout-everywhere/`),
 
     // Vendor Management
     getVendors: () => api.get('/vendors/'),
     createVendor: (data: any) => api.post('/vendors/', data),
-    updateVendor: (id: number, data: any) => api.put(`/vendors/${id}`, data),
-    deleteVendor: (id: number) => api.delete(`/vendors/${id}`),
+    updateVendor: (id: number, data: any) => api.put(`/vendors/${id}/`, data),
+    deleteVendor: (id: number) => api.delete(`/vendors/${id}/`),
 };
 
 /** Support: any authenticated user can create a ticket. */
 export const supportApi = {
-    createTicket: (message: string) => api.post('/support-tickets', { message }),
+    createTicket: (message: string) => api.post('/support-tickets/', { message }),
 };
+
 
 /** Notifications: recent activity for current user. */
 export const notificationsApi = {
     getNotifications: (params?: { limit?: number }) => api.get('/notifications/', { params }),
+};
+
+/** AI Assistant: rule-based helper. */
+export const assistantApi = {
+    query: (query: string) => api.post('/assistant/query', { query }),
 };
 
 export default api;

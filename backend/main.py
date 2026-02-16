@@ -1,8 +1,9 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from .database import engine, Base
-from .routes import auth, transaction
+from .routes import auth, transaction, admin, assistant, profile
 from .config import settings
 
 # Configure logging
@@ -24,9 +25,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount Static Files for Media
+app.mount("/media", StaticFiles(directory="backend/media"), name="media")
+
 # Include Routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(transaction.router, prefix="/api", tags=["Transactions"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(assistant.router, prefix="/api/assistant", tags=["Assistant"])
+app.include_router(profile.router, prefix="/api/profile", tags=["Profile"])
 
 @app.get("/")
 def read_root():

@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = "http://127.0.0.1:8001/api"
+BASE_URL = "http://127.0.0.1:8000/api"
 EMAIL = "hachllersocials@gmail.com"
 PASSWORD = "12122007"
 
@@ -10,7 +10,7 @@ def test_migration():
     
     # 1. Login
     login_url = f"{BASE_URL}/auth/login"
-    response = requests.post(login_url, data={"email": EMAIL, "password": PASSWORD})
+    response = requests.post(login_url, json={"email": EMAIL, "password": PASSWORD})
     if response.status_code != 200:
         print(f"❌ Login failed: {response.text}")
         return

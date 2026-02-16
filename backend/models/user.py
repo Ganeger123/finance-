@@ -9,4 +9,5 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
     role = Column(String, default="user")
-    status = Column(String, default="approved")
+    status = Column(String, default="pending")
+    photo_url = Column(String, nullable=True)

@@ -37,6 +37,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
+def require_role(role: str):
+    def role_checker(current_user: user_model.User = Depends(get_current_user)):
+        if current_user.role != role and current_user.role != "super_admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Operation not permitted"
+            )
+        return current_user
+    return role_checker
+
 @router.post("/register", response_model=auth_schema.UserResponse)
 def register(user: auth_schema.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)

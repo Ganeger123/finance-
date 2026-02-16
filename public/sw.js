@@ -51,3 +51,52 @@ self.addEventListener('fetch', (event) => {
             })
     );
 });
+
+// PWA Notification Handling
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+        const { title, body, icon, data } = event.data.payload;
+        self.registration.showNotification(title, {
+            body,
+            icon: icon || '/pwa_icon_512.png',
+            badge: '/pwa_icon_512.png',
+            data: data || {}
+        });
+    }
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            if (clientList.length > 0) {
+                let client = clientList[0];
+                for (let i = 0; i < clientList.length; i++) {
+                    if (clientList[i].focused) {
+                        client = clientList[i];
+                        break;
+                    }
+                }
+                return client.focus();
+            }
+            return clients.openWindow('/');
+        })
+    );
+});
+
+self.addEventListener('push', (event) => {
+    let data = { title: 'Panacée Notification', body: 'New update available.' };
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data.body = event.data.text();
+        }
+    }
+    const options = {
+        body: data.body,
+        icon: '/pwa_icon_512.png',
+        badge: '/pwa_icon_512.png',
+    };
+    event.waitUntil(self.registration.showNotification(data.title, options));
+});

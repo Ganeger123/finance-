@@ -51,9 +51,10 @@ class AuditLoggingMiddleware:
                 try:
                     decoded = decode_token(token)
                     if decoded:
-                        user_id = decoded.get('sub')
-                        user = User.objects.filter(id=user_id).first()
+                        user_email_from_token = decoded.get('sub')
+                        user = User.objects.filter(email=user_email_from_token).first()
                         if user:
+                            user_id = user.id
                             user_email = user.email
                             user_name = user.full_name or ""
                 except:

@@ -16,9 +16,13 @@ class UserResponse(UserBase):
     name: Optional[str] = None
     role: str
     status: str
+    photo_url: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class UserStatusUpdate(BaseModel):
+    status: str # approved, rejected, pending
 
 class Token(BaseModel):
     access_token: str

@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Transaction } from './types';
-import { INITIAL_TRANSACTIONS } from './mockData';
-// LOGIN DISABLED - will be re-added later
-// import Login from './pages/Login';
+import { User, Transaction, Workspace } from './types';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
 import Income from './pages/Income';
 import Search from './pages/Search';
 import Settings from './pages/Settings';
 import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+import Modal from './components/Modal';
+import TransactionForm from './components/TransactionForm';
 import WorkspaceManager from './pages/WorkspaceManager';
 import FormBuilder from './pages/FormBuilder';
 import CustomExpenseEntry from './pages/CustomExpenseEntry';
@@ -22,33 +23,54 @@ import AdminSupport from './pages/AdminSupport';
 import Notifications from './pages/Notifications';
 import Help from './pages/Help';
 import InstallPWA from './components/InstallPWA';
-import { Workspace } from './types';
+import FinBot from './components/FinBot';
 
 import { financeApi, authApi } from './apiClient';
 
-// MOCK USER - LOGIN DISABLED FOR TESTING
-const MOCK_USER: User = {
-  id: '1',
-  full_name: 'Test User',
-  email: 'test@example.com',
-  role: 'super_admin',
-  status: 'approved'
-};
-
 const App: React.FC = () => {
-  const [user, setUser] = useState<User>(MOCK_USER);
-  const [sessionChecked, setSessionChecked] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | undefined>(undefined);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Modal states
+  const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showAddIncome, setShowAddIncome] = useState(false);
+
+  // PWA Service Worker Registration & Notification Permission
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then((registration) => {
+          console.log('SW registered:', registration);
+        }).catch((error) => {
+          console.log('SW registration failed:', error);
+        });
+      });
+    }
+
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const triggerNotification = (title: string, body: string) => {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        payload: { title, body }
+      });
+    } else if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/pwa_icon_512.png' });
+    }
+  };
+
   // Fetch transactions from API
   const fetchTransactions = async () => {
     if (!user) return;
-
-    // Skip fetching if we're on a workspace-dependent page but no workspace is selected
     const workspacePages = ['custom-expenses', 'form-builder'];
     if (!selectedWorkspace && workspacePages.includes(currentPage)) {
       setTransactions([]);
@@ -58,8 +80,6 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
       const params = selectedWorkspace ? { workspace_id: selectedWorkspace.id } : {};
-
-      // Fetch expenses and income; tolerate 401/500 and use empty arrays
       let expensesData: any[] = [];
       let incomeData: any[] = [];
       let formsData: any[] = [];
@@ -90,7 +110,6 @@ const App: React.FC = () => {
         try {
           const entryPromises = formsData.map((f: any) => financeApi.getEntries(f.id));
           const entriesResponses = await Promise.allSettled(entryPromises);
-
           entriesResponses.forEach((result, index) => {
             if (result.status !== 'fulfilled' || !result.value?.data) return;
             const form = formsData[index];
@@ -152,15 +171,53 @@ const App: React.FC = () => {
     }
   };
 
-  // LOGIN DISABLED - Using mock user for testing
-  // useEffect(() => {
-  //   let cancelled = false;
-  //   const restoreSession = async () => {
-  //     // Session restoration disabled
-  //   };
-  //   restoreSession();
-  //   return () => { cancelled = true; };
-  // }, []);
+  const decodeToken = (token: string) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const decoded = decodeToken(token);
+          if (decoded && decoded.exp * 1000 > Date.now()) {
+            const response = await authApi.getMe();
+            if (response.data) {
+              const u = response.data;
+              setUser({
+                id: String(u.id),
+                full_name: u.full_name || u.email.split('@')[0],
+                email: u.email,
+                role: u.role || 'user',
+                status: u.status || 'pending',
+                photo_url: u.photo_url
+              });
+            }
+          } else {
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+          }
+        }
+      } catch (e) {
+        console.error("Session restoration failed", e);
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+      } finally {
+        setSessionChecked(true);
+      }
+    };
+    restoreSession();
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -168,36 +225,51 @@ const App: React.FC = () => {
     }
   }, [user, selectedWorkspace]);
 
-  // No redirect: all users can see Tableau de Bord and Rentrées
-
-  // Admin-only route guard: redirect non-admins away from admin pages
-  const adminPages = ['admin-dashboard', 'admin-settings', 'admin-support'];
   const isAdmin = user && (user.role === 'admin' || user.role === 'super_admin');
   useEffect(() => {
+    const adminPages = ['admin-dashboard', 'admin-settings', 'admin-support'];
     if (user && adminPages.includes(currentPage) && !isAdmin) {
       setCurrentPage('dashboard');
     }
   }, [user, currentPage, isAdmin]);
 
-  // LOGIN DISABLED - Always show app with mock user
+  const handleAddTransaction = (type: 'EXPENSE' | 'INCOME') => {
+    fetchTransactions();
+    setShowAddExpense(false);
+    setShowAddIncome(false);
 
-  const handleAddTransaction = () => {
-    fetchTransactions(); // Refresh data after adding
+    const title = type === 'EXPENSE' ? 'Dépense enregistrée' : 'Revenu enregistré';
+    const body = type === 'EXPENSE'
+      ? 'Votre nouvelle dépense a été ajoutée avec succès.'
+      : 'Votre nouveau revenu a été ajouté avec succès.';
+    triggerNotification(title, body);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch (e) {
+      console.warn("Logout API call failed", e);
+    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    setUser(null);
   };
 
   const renderPage = () => {
+    if (!user) return null;
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard transactions={transactions} />;
       case 'expenses':
-        return <Expenses transactions={transactions} onAdd={handleAddTransaction} selectedWorkspace={selectedWorkspace} role={user.role} />;
+        return <Expenses transactions={transactions} onAdd={fetchTransactions} selectedWorkspace={selectedWorkspace} role={user.role} />;
       case 'income':
       case 'rentrees':
-        return <Income transactions={transactions} onAdd={handleAddTransaction} selectedWorkspace={selectedWorkspace} role={user.role} />;
+        return <Income transactions={transactions} onAdd={fetchTransactions} selectedWorkspace={selectedWorkspace} role={user.role} />;
       case 'search':
         return <Search transactions={transactions} />;
       case 'settings':
-        return <Settings />;
+        return <Settings user={user} />;
       case 'workspaces':
         return <WorkspaceManager onSelect={setSelectedWorkspace} selectedWorkspace={selectedWorkspace} />;
       case 'form-builder':
@@ -209,7 +281,7 @@ const App: React.FC = () => {
       case 'reports':
         return <Reports user={user} />;
       case 'custom-expenses':
-        return selectedWorkspace ? <CustomExpenseEntry workspace={selectedWorkspace} role={user.role} onAdd={handleAddTransaction} /> : <WorkspaceManager onSelect={setSelectedWorkspace} />;
+        return selectedWorkspace ? <CustomExpenseEntry workspace={selectedWorkspace} role={user.role} onAdd={fetchTransactions} /> : <WorkspaceManager onSelect={setSelectedWorkspace} />;
       case 'admin-dashboard':
         return <AdminActivityDashboard />;
       case 'admin-settings':
@@ -225,43 +297,81 @@ const App: React.FC = () => {
     }
   };
 
+  if (!sessionChecked) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-layout)] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
-  // ... (rest of logic)
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
 
   return (
-    <div className="flex min-h-screen bg-[var(--bg-main)] text-slate-900 dark:text-slate-100 transition-colors duration-300 font-sans">
+    <div className="flex min-h-screen bg-[var(--bg-layout)] text-slate-900 transition-colors duration-300 font-sans">
       <InstallPWA />
-
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 z-30 px-4 py-3 flex items-center justify-between">
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-        >
-          <span className="text-2xl">☰</span>
-        </button>
-        <span className="font-bold text-lg dark:text-white">Panacée</span>
-        <div className="w-8"></div> {/* Spacer for balance */}
-      </div>
 
       <Sidebar
         role={user.role}
         activePage={currentPage}
         onNavigate={setCurrentPage}
-        onLogout={() => {
-          // LOGIN DISABLED - Logout not functional in test mode
-          console.log('Logout called - login disabled for testing');
-        }}
+        onLogout={handleLogout}
         userName={user.full_name || 'User'}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <main className="flex-1 transition-all duration-300 overflow-y-auto max-h-screen scroll-smooth pt-16 lg:pt-0 lg:ml-0">
-        <div className="max-w-[1600px] mx-auto p-6 md:p-10 lg:p-14 pb-24 lg:pb-14">
-          {renderPage()}
+      <main className="flex-1 transition-all duration-300 overflow-y-auto max-h-screen scroll-smooth">
+        {/* Mobile Navbar */}
+        <div className="lg:hidden sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 z-30 px-6 py-4 flex items-center justify-between">
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-slate-600">
+            <span className="text-2xl">☰</span>
+          </button>
+          <span className="font-black text-xl tracking-tight text-[#374b91]">FinTrack</span>
+          <div className="w-8"></div>
+        </div>
+
+        <div className="max-w-[1400px] mx-auto p-6 lg:p-10">
+          <Header
+            user={user}
+            onAddExpense={() => setShowAddExpense(true)}
+            onAddIncome={() => setShowAddIncome(true)}
+          />
+
+          <div className="pb-20">
+            {renderPage()}
+          </div>
         </div>
       </main>
+
+      {/* Global Modals */}
+      <Modal
+        isOpen={showAddExpense}
+        onClose={() => setShowAddExpense(false)}
+        title="Add New Expense"
+      >
+        <TransactionForm
+          type="EXPENSE"
+          onSuccess={() => handleAddTransaction('EXPENSE')}
+          selectedWorkspace={selectedWorkspace}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={showAddIncome}
+        onClose={() => setShowAddIncome(false)}
+        title="Record New Income"
+      >
+        <TransactionForm
+          type="INCOME"
+          onSuccess={() => handleAddTransaction('INCOME')}
+          selectedWorkspace={selectedWorkspace}
+        />
+      </Modal>
+
+      {user && <FinBot />}
     </div>
   );
 };

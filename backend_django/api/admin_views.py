@@ -7,9 +7,14 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.core.paginator import Paginator
 
-from .models import ActivityLog, FormLog, SupportTicket, AdminSettings, User, ErrorLog
+from .models import (
+    ActivityLog, FormLog, SupportTicket, AdminSettings, User, ErrorLog, 
+    Expense, Income
+)
 from .views import _get_user_from_request
 from .services import get_client_ip, get_user_agent, log_activity, send_alert_to_admin
+from django.db.models import Sum
+from datetime import timedelta
 
 def require_admin(view_func):
     """Decorator: require JWT and role in (admin, super_admin)."""
@@ -241,3 +246,154 @@ def user_lock(request, user_id):
     user.save(update_fields=['is_locked'])
     log_activity(request.admin_user.id, request.admin_user.email, request.admin_user.full_name or '', 'USER_LOCK' if lock else 'USER_UNLOCK', request, status='Success', details=f"Target: {user.email}")
     return JsonResponse({"message": f"User {'locked' if lock else 'unlocked'}", "user_id": user_id})
+@require_http_methods(["POST"])
+@csrf_exempt
+@require_admin
+def user_approve(request, user_id):
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return JsonResponse({"detail": "User not found"}, status=404)
+    user.status = "approved"
+    user.save(update_fields=['status'])
+    log_activity(request.admin_user.id, request.admin_user.email, request.admin_user.full_name or '', 'USER_APPROVE', request, status='Success', details=f"Target: {user.email}")
+    return JsonResponse({"id": user.id, "status": user.status})
+
+@require_http_methods(["POST"])
+@csrf_exempt
+@require_admin
+def user_reject(request, user_id):
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return JsonResponse({"detail": "User not found"}, status=404)
+    user.status = "rejected"
+    user.token_version += 1
+    user.save(update_fields=['status', 'token_version'])
+    log_activity(request.admin_user.id, request.admin_user.email, request.admin_user.full_name or '', 'USER_REJECT', request, status='Success', details=f"Target: {user.email}")
+    return JsonResponse({"id": user.id, "status": user.status})
+
+@require_http_methods(["PATCH", "PUT"])
+@csrf_exempt
+@require_admin
+def user_update(request, user_id):
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return JsonResponse({"detail": "User not found"}, status=404)
+    if user.role in ('admin', 'super_admin') and request.admin_user.role != 'super_admin':
+        return JsonResponse({"detail": "Cannot modify another admin"}, status=403)
+    
+    if "full_name" in data:
+        user.full_name = data["full_name"]
+    if "role" in data:
+        user.role = data["role"]
+    if "status" in data:
+        user.status = data["status"]
+    
+    user.save()
+    log_activity(request.admin_user.id, request.admin_user.email, request.admin_user.full_name or '', 'USER_UPDATE', request, status='Success', details=f"Target: {user.email}")
+    return JsonResponse({"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role, "status": user.status})
+
+@require_http_methods(["DELETE"])
+@csrf_exempt
+@require_admin
+def user_delete(request, user_id):
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return JsonResponse({"detail": "User not found"}, status=404)
+    if user.role == 'super_admin':
+        return JsonResponse({"detail": "Cannot delete super_admin"}, status=403)
+    email = user.email
+    user.delete()
+    log_activity(request.admin_user.id, request.admin_user.email, request.admin_user.full_name or '', 'USER_DELETE', request, status='Success', details=f"Target: {email}")
+    return JsonResponse({"message": "User deleted"})
+
+@require_http_methods(["POST"])
+@csrf_exempt
+@require_admin
+def user_reset_password(request, user_id):
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    new_password = data.get("new_password")
+    if not new_password:
+        return JsonResponse({"detail": "new_password required"}, status=400)
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return JsonResponse({"detail": "User not found"}, status=404)
+    user.set_password(new_password)
+    user.token_version += 1
+    user.save()
+    log_activity(request.admin_user.id, request.admin_user.email, request.admin_user.full_name or '', 'USER_PASSWORD_RESET', request, status='Success', details=f"Target: {user.email}")
+    return JsonResponse({"message": "Password reset successful"})
+
+@require_http_methods(["POST"])
+@csrf_exempt
+@require_admin
+def user_logout_everywhere(request, user_id):
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return JsonResponse({"detail": "User not found"}, status=404)
+    user.token_version += 1
+    user.save(update_fields=['token_version'])
+    log_activity(request.admin_user.id, request.admin_user.email, request.admin_user.full_name or '', 'USER_LOGOUT_EVERYWHERE', request, status='Success', details=f"Target: {user.email}")
+    return JsonResponse({"message": "All sessions invalidated"})
+@require_http_methods(["GET"])
+@require_admin
+def system_stats_view(request):
+    """Real-time stats for admin dashboard."""
+    now = timezone.now()
+    one_hour_ago = now - timedelta(hours=1)
+    
+    # Active sessions defined as users who logged in or performed an action in last hour
+    active_sessions = ActivityLog.objects.filter(created_at__gte=one_hour_ago).values('user_id').distinct().count()
+    total_users = User.objects.count()
+    pending_users = User.objects.filter(status='pending').count()
+    
+    # Financial volume
+    total_inc = Income.objects.aggregate(Sum('amount'))['amount__sum'] or 0
+    total_exp = Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # Recent activity feed
+    recent_logs = ActivityLog.objects.all().order_by('-created_at')[:10]
+    activity_feed = [
+        {
+            "id": log.id,
+            "user_email": log.user_email,
+            "action": log.action,
+            "time": log.created_at.isoformat(),
+            "status": log.status
+        }
+        for log in recent_logs
+    ]
+    
+    return JsonResponse({
+        "active_sessions": active_sessions,
+        "total_users": total_users,
+        "pending_users": pending_users,
+        "financial_volume": {
+            "income": float(total_inc),
+            "expenses": float(total_exp)
+        },
+        "activity_feed": activity_feed
+    })
+
+
+@require_http_methods(["POST"])
+@require_admin
+@csrf_exempt
+def user_force_logout(request, user_id):
+    """Invalidate all sessions for a specific user."""
+    user = User.objects.filter(id=user_id).first()
+    if not user:
+        return JsonResponse({"detail": "User not found"}, status=404)
+    
+    user.token_version += 1
+    user.save(update_fields=['token_version'])
+    
+    log_activity(request.admin_user.id, request.admin_user.email, request.admin_user.full_name or '', 'FORCE_LOGOUT', request, details=f"Target: {user.email}")
+    
+    return JsonResponse({"message": f"Successfully forced logout for {user.email}"})

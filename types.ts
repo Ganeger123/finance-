@@ -8,6 +8,7 @@ export interface User {
   email: string;
   role: Role;
   status: UserStatus;
+  photo_url?: string;
   last_seen?: string;
 }
 

@@ -9,5 +9,9 @@ class Transaction(Base):
     amount = Column(Float, nullable=False)
     category = Column(String, nullable=True)
     type = Column(String, nullable=True) # "income" or "expense"
-    date = Column(String, nullable=True) # SQLite stores dates as strings usually, matching JS "TEXT"
+    date = Column(String, nullable=True)
+    comment = Column(String, nullable=True)
+    workspace_id = Column(Integer, nullable=True)
+    student_count = Column(Integer, nullable=True)
+    subtype = Column(String, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

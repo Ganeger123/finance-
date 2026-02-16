@@ -1,15 +1,15 @@
 import json
+import os
+import datetime as dt
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.conf import settings
 
-from .models import User
-from .auth_utils import (
-    create_access_token,
-    create_refresh_token,
-    decode_token,
+from .models import (
+    User, ActivityLog, FormLog, ErrorLog, Workspace, ExpenseForm, 
+    ExpenseField, ExpenseEntry, Expense, Income, Report
 )
 from .services import (
     get_client_ip,
@@ -17,12 +17,16 @@ from .services import (
     log_activity,
     send_alert_to_admin,
     count_recent_failed_logins,
+    generate_monthly_report_pdf
 )
-from .models import (
-    User, ActivityLog, FormLog, ErrorLog, Workspace, ExpenseForm, 
-    ExpenseField, ExpenseEntry, Expense, Income
+from .auth_utils import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
 )
 from .rate_limit import check_rate_limit, incr_rate_limit
+from django.db.models import Sum
+from datetime import date
 
 def _user_to_json(user):
     return {
@@ -33,26 +37,35 @@ def _user_to_json(user):
         "status": user.status,
     }
 
-
 @require_http_methods(["GET"])
 def health_check(request):
     return JsonResponse({
         "status": "healthy",
         "project_name": "Panacée Financial Management",
+        "timestamp": timezone.now().isoformat()
     })
 
+@require_http_methods(["GET"])
+def metrics_view(request):
+    """Simple system metrics for monitoring."""
+    return JsonResponse({
+        "total_users": User.objects.count(),
+        "total_expenses_records": Expense.objects.count(),
+        "total_income_records": Income.objects.count(),
+        "total_audit_logs": ActivityLog.objects.count()
+    })
 
 def _parse_login_body(request):
     body = request.body.decode("utf-8")
     if "application/x-www-form-urlencoded" in request.META.get("CONTENT_TYPE", ""):
         from urllib.parse import parse_qs
         data = parse_qs(body)
-        username = (data.get("username") or [""])[0]
+        username = (data.get("username") or data.get("email") or [""])[0]
         password = (data.get("password") or [""])[0]
     else:
         try:
             data = json.loads(body) if body else {}
-            username = data.get("username", "")
+            username = data.get("username") or data.get("email") or ""
             password = data.get("password", "")
         except json.JSONDecodeError:
             return None, None
@@ -118,7 +131,6 @@ def login(request):
         "token_type": "bearer",
     })
 
-
 @require_http_methods(["POST"])
 @csrf_exempt
 def register(request):
@@ -139,6 +151,7 @@ def register(request):
         return JsonResponse({"detail": "The user with this email already exists in the system"}, status=400)
 
     try:
+        from django.db import IntegrityError
         user = User.objects.create_user(
             email=email,
             password=password,
@@ -149,7 +162,6 @@ def register(request):
         return JsonResponse(_user_to_json(user), status=201)
     except IntegrityError:
         return JsonResponse({"detail": "User already exists"}, status=400)
-
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -188,7 +200,6 @@ def refresh(request):
         "token_type": "bearer",
     })
 
-
 def _get_user_from_request(request):
     auth = request.META.get("HTTP_AUTHORIZATION")
     if not auth or not auth.startswith("Bearer "):
@@ -198,10 +209,12 @@ def _get_user_from_request(request):
         payload = decode_token(token)
         if payload.get("type") != "access":
             return None
-        return User.objects.filter(email=payload.get("sub")).first()
+        user = User.objects.filter(email=payload.get("sub")).first()
+        if not user or user.token_version != payload.get("version"):
+            return None
+        return user
     except Exception:
         return None
-
 
 @require_http_methods(["GET"])
 def me(request):
@@ -209,7 +222,6 @@ def me(request):
     if not user:
         return JsonResponse({"detail": "Not authenticated"}, status=401)
     return JsonResponse(_user_to_json(user))
-
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -220,7 +232,6 @@ def logout(request):
         user.token_version += 1
         user.save(update_fields=['token_version'])
     return JsonResponse({"message": "Logged out successfully"})
-
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -245,11 +256,9 @@ def password_change(request):
     send_alert_to_admin('PASSWORD_CHANGED', user.email, user.full_name or '', get_client_ip(request), get_user_agent(request), timezone.now().strftime("%Y-%m-%d %H:%M"))
     return JsonResponse({"message": "Password changed successfully"})
 
-
 @require_http_methods(["POST"])
 @csrf_exempt
 def password_reset_request(request):
-    """Request password reset: send token/link by email (simplified: we just log and email admin; no token in this stub)."""
     try:
         data = json.loads(request.body) if request.body else {}
     except json.JSONDecodeError:
@@ -263,8 +272,6 @@ def password_reset_request(request):
         send_alert_to_admin('PASSWORD_RESET', user.email, user.full_name or '', get_client_ip(request), get_user_agent(request), timezone.now().strftime("%Y-%m-%d %H:%M"))
     return JsonResponse({"message": "If an account exists with this email, you will receive reset instructions."})
 
-
-# ---- Stub endpoints so frontend does not 404 after login (extend later with real logic) ----
 def _require_auth(request):
     user = _get_user_from_request(request)
     if not user:
@@ -282,107 +289,30 @@ def expenses_view(request):
             data = json.loads(request.body) if request.body else {}
         except json.JSONDecodeError:
             return JsonResponse({"detail": "Invalid JSON"}, status=400)
-        category = (data.get("category") or "").strip() or "AUTRE"
-        try:
-            amount = float(data.get("amount", 0))
-        except (TypeError, ValueError):
-            return JsonResponse({"detail": "Invalid amount"}, status=400)
-        comment = (data.get("comment") or "").strip()
-        date_str = data.get("date") or timezone.now().date().isoformat()
-        workspace_id = data.get("workspace_id")
-        try:
-            from datetime import datetime
-            date = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-        except (ValueError, TypeError):
-            date = timezone.now().date()
-        obj = Expense.objects.create(
+        e = Expense.objects.create(
             user_id=user.id,
-            workspace_id=workspace_id,
-            category=category,
-            amount=amount,
-            comment=comment,
-            date=date,
+            workspace_id=data.get("workspace_id"),
+            category=data.get("category", "AUTRE"),
+            amount=data.get("amount", 0),
+            date=data.get("date", date.today().isoformat()),
+            comment=data.get("comment", "")
         )
-        return JsonResponse({
-            "id": obj.id,
-            "category": obj.category,
-            "amount": float(obj.amount),
-            "comment": obj.comment,
-            "date": obj.date.isoformat(),
-            "created_at": obj.created_at.isoformat(),
-        }, status=201)
-    workspace_id = request.GET.get("workspace_id")
-    qs = Expense.objects.filter(user_id=user.id)
-    if workspace_id:
-        try:
-            qs = qs.filter(workspace_id=int(workspace_id))
-        except ValueError:
-            pass
-    qs = qs.order_by("-date", "-created_at")
-    out = [
-        {
-            "id": e.id,
-            "category": e.category,
-            "amount": float(e.amount),
-            "comment": e.comment,
-            "date": e.date.isoformat(),
-            "created_at": e.created_at.isoformat(),
-        }
-        for e in qs
-    ]
-    return JsonResponse(out)
+        log_activity(user.id, user.email, user.full_name or '', 'CREATE_EXPENSE', request, status='Success', details=f"Amount: {e.amount}")
+        return JsonResponse({"id": e.id, "category": e.category, "amount": float(e.amount), "date": e.date.isoformat()}, status=201)
+    expenses = Expense.objects.filter(user_id=user.id).order_by("-date")
+    return JsonResponse([{"id": e.id, "category": e.category, "amount": float(e.amount), "date": e.date.isoformat()} for e in expenses], safe=False)
 
-
-@require_http_methods(["DELETE", "PUT", "PATCH"])
+@require_http_methods(["DELETE"])
 @csrf_exempt
 def expense_delete(request, expense_id):
     user, err = _require_auth(request)
     if err:
         return err
-    obj = Expense.objects.filter(id=expense_id, user_id=user.id).first()
-    if not obj:
+    e = Expense.objects.filter(id=expense_id, user_id=user.id).first()
+    if not e:
         return JsonResponse({"detail": "Not found"}, status=404)
-    
-    if request.method in ("PUT", "PATCH"):
-        # Update expense
-        try:
-            data = json.loads(request.body) if request.body else {}
-        except json.JSONDecodeError:
-            return JsonResponse({"detail": "Invalid JSON"}, status=400)
-        
-        if "category" in data:
-            obj.category = (data.get("category") or "").strip() or obj.category
-        if "amount" in data:
-            try:
-                obj.amount = float(data.get("amount"))
-            except (TypeError, ValueError):
-                return JsonResponse({"detail": "Invalid amount"}, status=400)
-        if "comment" in data:
-            obj.comment = (data.get("comment") or "").strip()
-        if "date" in data:
-            try:
-                from datetime import datetime
-                obj.date = datetime.strptime(data.get("date", "")[:10], "%Y-%m-%d").date()
-            except (ValueError, TypeError):
-                pass  # Keep existing date if invalid
-        
-        obj.save()
-        log_activity(user.id, user.email, user.full_name or '', 'UPDATE', request, details=f'Updated expense {expense_id}')
-        
-        return JsonResponse({
-            "id": obj.id,
-            "category": obj.category,
-            "amount": float(obj.amount),
-            "comment": obj.comment,
-            "date": obj.date.isoformat(),
-            "created_at": obj.created_at.isoformat(),
-        }, status=200)
-    
-    # DELETE
-    obj.delete()
-    log_activity(user.id, user.email, user.full_name or '', 'DELETE', request, details=f'Deleted expense {expense_id}')
+    e.delete()
     return JsonResponse({"message": "Deleted"})
-
 
 @require_http_methods(["GET", "POST"])
 @csrf_exempt
@@ -395,122 +325,31 @@ def income_view(request):
             data = json.loads(request.body) if request.body else {}
         except json.JSONDecodeError:
             return JsonResponse({"detail": "Invalid JSON"}, status=400)
-        itype = (data.get("type") or "PLATFORM").strip()
-        subtype = (data.get("subtype") or data.get("feeType") or "").strip()
-        try:
-            amount = float(data.get("amount", 0))
-        except (TypeError, ValueError):
-            return JsonResponse({"detail": "Invalid amount"}, status=400)
-        student_count = int(data.get("student_count", 0) or 0)
-        comment = (data.get("comment") or "").strip()
-        date_str = data.get("date") or timezone.now().date().isoformat()
-        workspace_id = data.get("workspace_id")
-        try:
-            from datetime import datetime
-            date = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-        except (ValueError, TypeError):
-            date = timezone.now().date()
-        obj = Income.objects.create(
+        i = Income.objects.create(
             user_id=user.id,
-            workspace_id=workspace_id,
-            type=itype,
-            subtype=subtype,
-            amount=amount,
-            student_count=student_count,
-            comment=comment,
-            date=date,
+            workspace_id=data.get("workspace_id"),
+            type=data.get("type") or data.get("category", "AUTRE"),
+            subtype=data.get("subtype", ""),
+            amount=data.get("amount", 0),
+            date=data.get("date", date.today().isoformat()),
+            comment=data.get("comment", ""),
+            student_count=data.get("student_count", 0)
         )
-        return JsonResponse({
-            "id": obj.id,
-            "type": obj.type,
-            "subtype": obj.subtype or "",
-            "amount": float(obj.amount),
-            "student_count": obj.student_count,
-            "comment": obj.comment,
-            "date": obj.date.isoformat(),
-            "created_at": obj.created_at.isoformat(),
-        }, status=201)
-    workspace_id = request.GET.get("workspace_id")
-    qs = Income.objects.filter(user_id=user.id)
-    if workspace_id:
-        try:
-            qs = qs.filter(workspace_id=int(workspace_id))
-        except ValueError:
-            pass
-    qs = qs.order_by("-date", "-created_at")
-    out = [
-        {
-            "id": i.id,
-            "type": i.type,
-            "subtype": i.subtype or "",
-            "amount": float(i.amount),
-            "student_count": i.student_count,
-            "comment": i.comment,
-            "date": i.date.isoformat(),
-            "created_at": i.created_at.isoformat(),
-        }
-        for i in qs
-    ]
-    return JsonResponse(out)
+        log_activity(user.id, user.email, user.full_name or '', 'CREATE_INCOME', request, status='Success', details=f"Amount: {i.amount}")
+        return JsonResponse({"id": i.id, "type": i.type, "amount": float(i.amount), "date": i.date.isoformat()}, status=201)
+    income = Income.objects.filter(user_id=user.id).order_by("-date")
+    return JsonResponse([{"id": i.id, "type": i.type, "amount": float(i.amount), "date": i.date.isoformat(), "comment": i.comment} for i in income], safe=False)
 
-
-@require_http_methods(["DELETE", "PUT", "PATCH"])
+@require_http_methods(["DELETE"])
 @csrf_exempt
 def income_delete(request, income_id):
     user, err = _require_auth(request)
     if err:
         return err
-    obj = Income.objects.filter(id=income_id, user_id=user.id).first()
-    if not obj:
+    i = Income.objects.filter(id=income_id, user_id=user.id).first()
+    if not i:
         return JsonResponse({"detail": "Not found"}, status=404)
-    
-    if request.method in ("PUT", "PATCH"):
-        # Update income
-        try:
-            data = json.loads(request.body) if request.body else {}
-        except json.JSONDecodeError:
-            return JsonResponse({"detail": "Invalid JSON"}, status=400)
-        
-        if "type" in data:
-            obj.type = (data.get("type") or "").strip() or obj.type
-        if "subtype" in data:
-            obj.subtype = (data.get("subtype") or "").strip()
-        if "amount" in data:
-            try:
-                obj.amount = float(data.get("amount"))
-            except (TypeError, ValueError):
-                return JsonResponse({"detail": "Invalid amount"}, status=400)
-        if "student_count" in data:
-            try:
-                obj.student_count = int(data.get("student_count", 0) or 0)
-            except (TypeError, ValueError):
-                pass
-        if "comment" in data:
-            obj.comment = (data.get("comment") or "").strip()
-        if "date" in data:
-            try:
-                from datetime import datetime
-                obj.date = datetime.strptime(data.get("date", "")[:10], "%Y-%m-%d").date()
-            except (ValueError, TypeError):
-                pass  # Keep existing date if invalid
-        
-        obj.save()
-        log_activity(user.id, user.email, user.full_name or '', 'UPDATE', request, details=f'Updated income {income_id}')
-        
-        return JsonResponse({
-            "id": obj.id,
-            "type": obj.type,
-            "subtype": obj.subtype or "",
-            "amount": float(obj.amount),
-            "student_count": obj.student_count,
-            "comment": obj.comment,
-            "date": obj.date.isoformat(),
-            "created_at": obj.created_at.isoformat(),
-        }, status=200)
-    
-    # DELETE
-    obj.delete()
-    log_activity(user.id, user.email, user.full_name or '', 'DELETE', request, details=f'Deleted income {income_id}')
+    i.delete()
     return JsonResponse({"message": "Deleted"})
 
 @require_http_methods(["GET", "POST"])
@@ -519,24 +358,15 @@ def workspaces_view(request):
     user, err = _require_auth(request)
     if err:
         return err
-    if request.method == "GET":
-        qs = Workspace.objects.filter(owner_id=user.id).order_by('name')
-        out = [{"id": w.id, "name": w.name, "slug": w.slug, "owner_id": w.owner_id, "created_at": w.created_at.isoformat()} for w in qs]
-        return JsonResponse(out)
-    try:
-        data = json.loads(request.body) if request.body else {}
-    except json.JSONDecodeError:
-        return JsonResponse({"detail": "Invalid JSON"}, status=400)
-    name = (data.get("name") or "").strip()
-    slug = (data.get("slug") or "").strip()
-    if not name:
-        return JsonResponse({"detail": "name required"}, status=400)
-    if not slug:
-        slug = name.lower().replace(" ", "-").replace("/", "-")[:100]
-    if Workspace.objects.filter(slug=slug).exists():
-        return JsonResponse({"detail": "Workspace with this slug already exists"}, status=400)
-    w = Workspace.objects.create(name=name, slug=slug, owner_id=user.id)
-    return JsonResponse({"id": w.id, "name": w.name, "slug": w.slug, "owner_id": w.owner_id, "created_at": w.created_at.isoformat()}, status=201)
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "Invalid JSON"}, status=400)
+        ws = Workspace.objects.create(owner_id=user.id, name=data.get("name", "New Workspace"))
+        return JsonResponse({"id": ws.id, "name": ws.name}, status=201)
+    workspaces = Workspace.objects.filter(owner_id=user.id)
+    return JsonResponse([{"id": w.id, "name": w.name} for w in workspaces], safe=False)
 
 @require_http_methods(["DELETE"])
 @csrf_exempt
@@ -544,10 +374,10 @@ def workspaces_delete(request, workspace_id):
     user, err = _require_auth(request)
     if err:
         return err
-    w = Workspace.objects.filter(id=workspace_id, owner_id=user.id).first()
-    if not w:
+    ws = Workspace.objects.filter(id=workspace_id, owner_id=user.id).first()
+    if not ws:
         return JsonResponse({"detail": "Not found"}, status=404)
-    w.delete()
+    ws.delete()
     return JsonResponse({"message": "Deleted"})
 
 @require_http_methods(["GET", "POST"])
@@ -561,15 +391,14 @@ def expense_forms_view(request):
             data = json.loads(request.body) if request.body else {}
         except json.JSONDecodeError:
             return JsonResponse({"detail": "Invalid JSON"}, status=400)
-        name = (data.get("name") or "").strip()
         workspace_id = data.get("workspace_id")
-        if not name or workspace_id is None:
-            return JsonResponse({"detail": "name and workspace_id required"}, status=400)
+        if not workspace_id:
+            return JsonResponse({"detail": "workspace_id required"}, status=400)
         ws = Workspace.objects.filter(id=workspace_id, owner_id=user.id).first()
         if not ws:
             return JsonResponse({"detail": "Workspace not found"}, status=404)
-        f = ExpenseForm.objects.create(name=name, description=(data.get("description") or ""), workspace_id=workspace_id)
-        for field in data.get("fields") or []:
+        f = ExpenseForm.objects.create(workspace_id=ws.id, name=data.get("name", "Form"), description=data.get("description", ""))
+        for field in data.get("fields", []):
             ExpenseField.objects.create(
                 form_id=f.id,
                 label=field.get("label") or "Field",
@@ -587,9 +416,7 @@ def expense_forms_view(request):
     if not workspace_id:
         return JsonResponse({"detail": "workspace_id required"}, status=400)
     ws = Workspace.objects.filter(id=int(workspace_id)).first()
-    if not ws:
-        return JsonResponse({"detail": "Workspace not found"}, status=404)
-    if ws.owner_id != user.id:
+    if not ws or ws.owner_id != user.id:
         return JsonResponse({"detail": "Forbidden"}, status=403)
     forms = ExpenseForm.objects.filter(workspace_id=ws.id).order_by('name')
     out = []
@@ -600,7 +427,7 @@ def expense_forms_view(request):
             "workspace_id": f.workspace_id, "created_at": f.created_at.isoformat(),
             "fields": [{"id": fl.id, "form_id": fl.form_id, "label": fl.label, "field_type": fl.field_type, "required": fl.required, "options": fl.options or []} for fl in fields]
         })
-    return JsonResponse(out)
+    return JsonResponse(out, safe=False)
 
 @require_http_methods(["GET", "POST"])
 @csrf_exempt
@@ -620,7 +447,7 @@ def expense_entries_view(request):
             return JsonResponse({"detail": "Forbidden"}, status=403)
         entries = ExpenseEntry.objects.filter(form_id=form.id).order_by('-created_at')
         out = [{"id": e.id, "form_id": e.form_id, "workspace_id": e.workspace_id, "data": e.data, "created_at": e.created_at.isoformat()} for e in entries]
-        return JsonResponse(out)
+        return JsonResponse(out, safe=False)
     try:
         data = json.loads(request.body) if request.body else {}
     except json.JSONDecodeError:
@@ -651,17 +478,14 @@ def expense_entries_delete(request, entry_id):
     e = ExpenseEntry.objects.filter(id=entry_id).first()
     if not e:
         return JsonResponse({"detail": "Not found"}, status=404)
-    form = ExpenseForm.objects.filter(id=e.form_id).first()
     ws = Workspace.objects.filter(id=e.workspace_id).first()
     if not ws or ws.owner_id != user.id:
         return JsonResponse({"detail": "Forbidden"}, status=403)
     e.delete()
     return JsonResponse({"message": "Deleted"})
 
-
 @require_http_methods(["GET"])
 def notifications_list(request):
-    """Recent activity for the current user (for Notifications page)."""
     user, err = _require_auth(request)
     if err:
         return err
@@ -677,15 +501,61 @@ def notifications_list(request):
         }
         for log in logs
     ]
-    return JsonResponse(out)
-
+    return JsonResponse(out, safe=False)
 
 @require_http_methods(["GET"])
-def stub_dashboard_summary(request):
-    user, err = _require_auth(request)
-    if err:
-        return err
-    return JsonResponse({"total_income": 0, "total_expenses": 0, "net": 0})
+def monthly_report_pdf_view(request):
+    user = _get_user_from_request(request)
+    if not user:
+        return JsonResponse({"detail": "Not authenticated"}, status=401)
+    try:
+        year = int(request.GET.get("year", dt.datetime.now().year))
+        month = int(request.GET.get("month", dt.datetime.now().month))
+    except ValueError:
+        return JsonResponse({"detail": "Invalid year or month"}, status=400)
+    expenses = Expense.objects.filter(user_id=user.id, date__year=year, date__month=month)
+    income = Income.objects.filter(user_id=user.id, date__year=year, date__month=month)
+    total_exp = sum(e.amount for e in expenses)
+    total_inc = sum(i.amount for i in income)
+    transactions = sorted(list(expenses) + list(income), key=lambda x: x.date, reverse=True)
+    pdf_buffer = generate_monthly_report_pdf(
+        user_name=user.full_name or user.email,
+        year=year, month=month,
+        total_income=float(total_inc),
+        total_expenses=float(total_exp),
+        transactions=transactions,
+        profile_photo_path=user.profile_photo.path if user.profile_photo and os.path.exists(user.profile_photo.path) else None
+    )
+    from django.http import HttpResponse
+    response = HttpResponse(pdf_buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Report_{year}_{month}.pdf"'
+    log_activity(user.id, user.email, user.full_name or '', 'REPORT_GENERATED', request, details=f"Month: {month}, Year: {year}")
+    return response
+
+@require_http_methods(["GET"])
+def real_dashboard_summary(request):
+    user = _get_user_from_request(request)
+    if not user:
+        return JsonResponse({"detail": "Not authenticated"}, status=401)
+    try:
+        year = int(request.GET.get("year", dt.datetime.now().year))
+    except ValueError:
+        year = dt.datetime.now().year
+    expenses_qs = Expense.objects.filter(user_id=user.id, date__year=year)
+    income_qs = Income.objects.filter(user_id=user.id, date__year=year)
+    total_exp = expenses_qs.aggregate(Sum('amount'))['amount__sum'] or 0
+    total_inc = income_qs.aggregate(Sum('amount'))['amount__sum'] or 0
+    monthly_stats = []
+    for m in range(1, 13):
+        m_exp = expenses_qs.filter(date__month=m).aggregate(Sum('amount'))['amount__sum'] or 0
+        m_inc = income_qs.filter(date__month=m).aggregate(Sum('amount'))['amount__sum'] or 0
+        monthly_stats.append({"month": m, "income": float(m_inc), "expense": float(m_exp)})
+    return JsonResponse({
+        "total_income": float(total_inc),
+        "total_expenses": float(total_exp),
+        "net_result": float(total_inc - total_exp),
+        "monthly_stats": monthly_stats
+    })
 
 @require_http_methods(["GET"])
 def stub_expense_categories(request):
@@ -695,27 +565,25 @@ def stub_expense_categories(request):
     cats = list(Expense.objects.filter(user_id=user.id).values_list("category", flat=True).distinct())
     defaults = ["Salaire fixe", "Commission vendeur", "Annonce publicitaire", "Transport", "AUTRE"]
     merged = list(dict.fromkeys(cats + defaults))
-    return JsonResponse(merged)
+    return JsonResponse(merged, safe=False)
 
 @require_http_methods(["GET"])
 def stub_users(request):
     user, err = _require_auth(request)
     if err:
         return err
-    return JsonResponse([])
+    return JsonResponse([], safe=False)
 
 @require_http_methods(["GET"])
 def stub_vendors(request):
     user, err = _require_auth(request)
     if err:
         return err
-    return JsonResponse([])
-
+    return JsonResponse([], safe=False)
 
 @require_http_methods(["POST"])
 @csrf_exempt
 def form_submit(request):
-    """Track form submission: save to FormLog, notify admin by email."""
     user, err = _require_auth(request)
     if err:
         return err
@@ -726,8 +594,7 @@ def form_submit(request):
     form_name = data.get("form_name", "Form").strip() or "Form"
     data_summary = data.get("data_summary", "")
     if isinstance(data_summary, dict):
-        import json as _json
-        data_summary = _json.dumps(data_summary)[:2000]
+        data_summary = json.dumps(data_summary)[:2000]
     FormLog.objects.create(
         user_id=user.id,
         user_email=user.email,
@@ -735,27 +602,16 @@ def form_submit(request):
         data_summary=str(data_summary)[:2000],
     )
     log_activity(user.id, user.email, user.full_name or '', 'FORM_SUBMITTED', request, status='Success', details=form_name)
-    send_alert_to_admin(
-        'FORM_SUBMITTED',
-        user.email,
-        user.full_name or '',
-        get_client_ip(request),
-        get_user_agent(request),
-        timezone.now().strftime("%Y-%m-%d %H:%M"),
-        extra=f"Form: {form_name}\nSummary: {data_summary[:500]}",
-    )
+    send_alert_to_admin('FORM_SUBMITTED', user.email, user.full_name or '', get_client_ip(request), get_user_agent(request), timezone.now().strftime("%Y-%m-%d %H:%M"))
     return JsonResponse({"message": "Form submitted", "form_name": form_name})
-
 
 @require_http_methods(["POST"])
 @csrf_exempt
 def error_log_create(request):
-    """Frontend error logging endpoint. Endpoint logs frontend errors without requiring auth."""
     try:
         data = json.loads(request.body) if request.body else {}
     except json.JSONDecodeError:
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
-    
     user_id = None
     user_email = ""
     try:
@@ -763,37 +619,26 @@ def error_log_create(request):
         if token:
             decoded = decode_token(token)
             if decoded:
-                user_id = decoded.get('sub')
-                user = User.objects.filter(id=user_id).first()
+                user_email = decoded.get('sub')
+                user = User.objects.filter(email=user_email).first()
+                user_id = user.id if user else None
                 user_email = user.email if user else ""
     except:
-        pass  # If token decoding fails, still log the error with null user_id
-    
-    error_message = data.get("error_message", "Unknown error")[:1000]
-    error_stack = data.get("error_stack", "")[:5000]
-    endpoint = data.get("endpoint", "")[:500]
-    status_code = data.get("status_code")
-    details = data.get("details", "")[:1000]
-    
+        pass
     ErrorLog.objects.create(
-        user_id=user_id,
-        user_email=user_email,
-        error_message=error_message,
-        error_stack=error_stack,
-        endpoint=endpoint,
-        status_code=status_code,
-        details=details,
+        user_id=user_id, user_email=user_email,
+        error_message=data.get("error_message", "Unknown error")[:1000],
+        error_stack=data.get("error_stack", "")[:5000],
+        endpoint=data.get("endpoint", "")[:500],
+        status_code=data.get("status_code"),
+        details=data.get("details", "")[:1000],
         ip_address=get_client_ip(request),
     )
-    
     return JsonResponse({"message": "Error logged"}, status=201)
-
-
 
 @require_http_methods(["POST"])
 @csrf_exempt
 def support_ticket_create(request):
-    """Any authenticated user can create a support ticket."""
     user, err = _require_auth(request)
     if err:
         return err
@@ -805,15 +650,55 @@ def support_ticket_create(request):
     if not message:
         return JsonResponse({"detail": "message required"}, status=400)
     from .models import SupportTicket
-    ticket = SupportTicket.objects.create(
-        user_id=user.id,
-        user_email=user.email,
-        message=message,
-        status=SupportTicket.STATUS_OPEN,
-    )
-    return JsonResponse({
-        "id": ticket.id,
-        "message": ticket.message,
-        "status": ticket.status,
-        "created_at": ticket.created_at.isoformat(),
-    }, status=201)
+    ticket = SupportTicket.objects.create(user_id=user.id, user_email=user.email, message=message, status=SupportTicket.STATUS_OPEN)
+    return JsonResponse({"id": ticket.id, "message": ticket.message, "status": ticket.status, "created_at": ticket.created_at.isoformat()}, status=201)
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def assistant_query_view(request):
+    user = _get_user_from_request(request)
+    if not user: return JsonResponse({"detail": "Not authenticated"}, status=401)
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError: return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    query = data.get("query", "").lower().strip()
+    if not query: return JsonResponse({"detail": "query required"}, status=400)
+    now = dt.datetime.now()
+    expenses = Expense.objects.filter(user_id=user.id, date__year=now.year, date__month=now.month)
+    income = Income.objects.filter(user_id=user.id, date__year=now.year, date__month=now.month)
+    total_exp = sum(e.amount for e in expenses)
+    total_inc = sum(i.amount for i in income)
+    if "spend" in query or "expense" in query:
+        response = f"You have spent ${total_exp:,.2f} this month."
+    elif "income" in query or "earn" in query:
+        response = f"Your total income for this month is ${total_inc:,.2f}."
+    elif "save" in query or "net" in query:
+        response = f"Your net savings this month is ${(total_inc - total_exp):,.2f}."
+    elif "biggest" in query:
+        biggest = expenses.order_by('-amount').first()
+        response = f"Your biggest expense this month was {biggest.category} for ${biggest.amount:,.2f}." if biggest else "No expenses found."
+    else:
+        response = "I can only help with basic questions about spending, income, and savings."
+    return JsonResponse({"response": response})
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def profile_update(request):
+    user = _get_user_from_request(request)
+    if not user: return JsonResponse({"detail": "Not authenticated"}, status=401)
+    try: data = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError: return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    user.full_name = data.get("full_name", user.full_name)
+    user.save(update_fields=['full_name'])
+    return JsonResponse(_user_to_json(user))
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def profile_photo_upload(request):
+    user = _get_user_from_request(request)
+    if not user: return JsonResponse({"detail": "Not authenticated"}, status=401)
+    photo = request.FILES.get("photo")
+    if not photo: return JsonResponse({"detail": "No photo provided"}, status=400)
+    user.profile_photo = photo
+    user.save(update_fields=['profile_photo'])
+    return JsonResponse({"message": "Photo uploaded", "url": user.profile_photo.url if user.profile_photo else ""})
