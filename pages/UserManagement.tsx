@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { adminApi } from '../apiClient';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, Shield, Key, Trash2, Edit2, Search, Loader2 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { Users, Shield, Key, Trash2, Edit2, Search, Loader2, Check, X } from 'lucide-react';
 import Modal from '../components/Modal';
 
 const StatusBadge: React.FC<{ lastSeen?: string }> = ({ lastSeen }) => {
@@ -27,6 +28,7 @@ const UserManagement: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const { addToast } = useToast();
 
     // Modal States
     const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -41,6 +43,7 @@ const UserManagement: React.FC = () => {
             setUsers(response.data.users || []);
         } catch (err: any) {
             console.error(err);
+            addToast('error', 'Failed to load users');
         } finally {
             setIsLoading(false);
         }
@@ -49,6 +52,63 @@ const UserManagement: React.FC = () => {
     useEffect(() => {
         fetchUsers();
     }, []);
+
+    const handleApproveUser = async (userId: number) => {
+        try {
+            setIsSubmitting(true);
+            await adminApi.approveUser(userId);
+            addToast('success', 'User approved successfully');
+            fetchUsers();
+        } catch (err) {
+            addToast('error', 'Failed to approve user');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleRejectUser = async (userId: number) => {
+        if (!window.confirm('Are you sure you want to reject this user?')) return;
+        try {
+            setIsSubmitting(true);
+            await adminApi.rejectUser(userId);
+            addToast('success', 'User rejected');
+            fetchUsers();
+        } catch (err) {
+            addToast('error', 'Failed to reject user');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteUser = async (userId: number) => {
+        if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+        try {
+            setIsSubmitting(true);
+            await adminApi.deleteUser(userId);
+            addToast('success', 'User deleted successfully');
+            fetchUsers();
+        } catch (err) {
+            addToast('error', 'Failed to delete user');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleResetPassword = async () => {
+        if (!resettingPasswordUser || !newPassword) return;
+        try {
+            setIsSubmitting(true);
+            await adminApi.resetPassword(resettingPasswordUser.id as any, newPassword);
+            addToast('success', 'Password reset successfully');
+            setResettingPasswordUser(null);
+            setNewPassword('');
+            fetchUsers();
+        } catch (err) {
+            addToast('error', 'Failed to reset password');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const filteredUsers = users.filter(u =>
         (u.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -91,15 +151,40 @@ const UserManagement: React.FC = () => {
                                 <span className="text-xl font-bold text-indigo-600">{user.full_name?.[0] || user.email[0].toUpperCase()}</span>
                             </div>
                             <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                <button onClick={() => setEditingUser(user)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all">
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setResettingPasswordUser(user)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all">
-                                    <Key className="w-4 h-4" />
-                                </button>
-                                <button className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                                {user.status === 'pending' ? (
+                                    <>
+                                        <button 
+                                            onClick={() => handleApproveUser(user.id as any)}
+                                            disabled={isSubmitting}
+                                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                        </button>
+                                        <button 
+                                            onClick={() => handleRejectUser(user.id as any)}
+                                            disabled={isSubmitting}
+                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button 
+                                            onClick={() => setResettingPasswordUser(user)}
+                                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all"
+                                        >
+                                            <Key className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteUser(user.id as any)}
+                                            disabled={isSubmitting}
+                                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all disabled:opacity-50"
+                                        >
+                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -123,9 +208,36 @@ const UserManagement: React.FC = () => {
                 ))}
             </div>
 
-            {/* Modals placeholders */}
-            <Modal isOpen={!!editingUser} onClose={() => setEditingUser(null)} title="Edit User Access">
-                <div className="p-10 text-center text-slate-400 text-sm font-bold">User edit logic goes here...</div>
+            {/* Modals */}
+            <Modal isOpen={!!resettingPasswordUser} onClose={() => setResettingPasswordUser(null)} title={`Reset Password - ${resettingPasswordUser?.email}`}>
+                <div className="space-y-6 p-6">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">New Password</label>
+                        <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Enter new password"
+                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                        />
+                    </div>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={handleResetPassword}
+                            disabled={!newPassword || isSubmitting}
+                            className="flex-1 bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : null}
+                            Reset Password
+                        </button>
+                        <button
+                            onClick={() => setResettingPasswordUser(null)}
+                            className="flex-1 bg-slate-200 text-slate-800 font-bold py-2 rounded-lg hover:bg-slate-300"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

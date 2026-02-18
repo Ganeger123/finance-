@@ -7,7 +7,8 @@ import {
   UserCircle,
   Settings,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { Role } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -22,14 +23,12 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
+const SidebarContent: React.FC<SidebarProps & { onClose?: () => void }> = ({
   role,
   activePage,
   onNavigate,
   onLogout,
-  userName,
-  isOpen = true,
-  onClose
+  onClose,
 }) => {
   const { t } = useLanguage();
 
@@ -47,101 +46,127 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-sm transition-opacity"
-          onClick={onClose}
-        />
-      )}
-
-      <div className={`
-        fixed inset-y-0 left-0 w-64 sidebar-gradient text-white flex flex-col p-6
-        transition-transform duration-300 ease-in-out z-50
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        {/* Brand Logo */}
-        <div className="flex items-center gap-3 mb-10 px-2 group">
-          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md">
-            <LayoutDashboard className="w-6 h-6 text-emerald-400" />
+    <div className="flex flex-col h-full w-64 bg-gradient-to-b from-[#0f172a] via-[#111827] to-[#0f172a] text-white p-5 border-r border-white/5">
+      {/* Brand */}
+      <div className="flex items-center justify-between mb-8 px-1">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-500/20 rounded-xl flex items-center justify-center border border-emerald-500/30">
+            <LayoutDashboard className="w-5 h-5 text-emerald-400" />
           </div>
           <div className="flex items-center gap-1">
-            <h1 className="font-black text-xl tracking-tight">FinTrack</h1>
-            <ChevronRight className="w-4 h-4 text-slate-400/50 group-hover:translate-x-0.5 transition-transform" />
+            <h1 className="font-black text-lg tracking-tight text-white">FinTrack</h1>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
           </div>
         </div>
+        {/* Close button — only shown on mobile */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activePage === item.id;
+      {/* Main Nav */}
+      <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activePage === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleNavigate(item.id)}
+              className={`
+                w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left group
+                ${isActive
+                  ? 'bg-indigo-500/20 text-white border border-indigo-500/25'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'}
+              `}
+            >
+              <Icon className={`w-4.5 h-4.5 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-400' : 'text-slate-500 group-hover:text-slate-300'}`} style={{ width: '18px', height: '18px' }} />
+              <span className={`text-sm font-medium flex-1 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`}>
+                {item.label}
+              </span>
+              {isActive && (
+                <span className="w-1.5 h-4 bg-indigo-400 rounded-full flex-shrink-0" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Admin Section */}
+      {(role === 'admin' || role === 'super_admin') && (
+        <div className="mt-4 pt-4 border-t border-white/5 space-y-1">
+          <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.18em] mb-3 px-3">
+            Contrôle Admin
+          </p>
+          {[
+            { id: 'admin-dashboard', label: 'Console Admin', icon: Settings },
+            { id: 'users', label: 'Gest. Utilisateurs', icon: UserCircle },
+          ].map(({ id, label, icon: Icon }) => {
+            const isActive = activePage === id;
             return (
               <button
-                key={item.id}
-                onClick={() => handleNavigate(item.id)}
+                key={id}
+                onClick={() => handleNavigate(id)}
                 className={`
-                  w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left group
                   ${isActive
-                    ? 'bg-white/10 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                    ? 'bg-indigo-500/20 text-white border border-indigo-500/25'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'}
                 `}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
-                <span className={`text-sm font-semibold tracking-tight ${isActive ? 'text-white' : 'text-slate-400'}`}>
-                  {item.label}
-                </span>
-                {isActive && (
-                  <div className="ml-auto w-1 h-4 bg-emerald-400 rounded-full" />
-                )}
+                <Icon className="w-4.5 h-4.5 flex-shrink-0 text-slate-500 group-hover:text-slate-300" style={{ width: '18px', height: '18px' }} />
+                <span className="text-sm font-medium flex-1">{label}</span>
               </button>
             );
           })}
-        </nav>
-
-        {/* Admin Section */}
-        {(role === 'admin' || role === 'super_admin') && (
-          <div className="mt-6 pt-6 border-t border-white/5 space-y-1">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-4">{t('admin_control')}</p>
-            <button
-              onClick={() => handleNavigate('admin-dashboard')}
-              className={`
-                  w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                  ${activePage === 'admin-dashboard' ? 'bg-indigo-500/20 text-white border border-indigo-500/30' : 'text-slate-400 hover:text-white hover:bg-white/5'}
-                `}
-            >
-              <Settings className={`w-5 h-5 ${activePage === 'admin-dashboard' ? 'text-indigo-400' : ''}`} />
-              <span className="text-sm font-semibold">{t('admin_console')}</span>
-            </button>
-            <button
-              onClick={() => handleNavigate('users')}
-              className={`
-                  w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                  ${activePage === 'users' ? 'bg-indigo-500/20 text-white border border-indigo-500/30' : 'text-slate-400 hover:text-white hover:bg-white/5'}
-                `}
-            >
-              <UserCircle className={`w-5 h-5 ${activePage === 'users' ? 'text-indigo-400' : ''}`} />
-              <span className="text-sm font-semibold">{t('user_mgt')}</span>
-            </button>
-          </div>
-        )}
-
-        {/* Footer / Logout */}
-        <div className="mt-auto pt-6 border-t border-white/5">
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-4 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
-          >
-            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-rose-500/20 transition-colors">
-              <LogOut className="w-4 h-4 group-hover:text-rose-400 transition-colors" />
-            </div>
-            <span className="text-sm font-bold tracking-tight">{t('logout')}</span>
-            <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-              <ChevronRight className="w-4 h-4 text-slate-500" />
-            </div>
-          </button>
         </div>
+      )}
+
+      {/* Logout */}
+      <div className="mt-4 pt-4 border-t border-white/5">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all group border border-transparent"
+        >
+          <LogOut className="w-4.5 h-4.5 flex-shrink-0 group-hover:text-rose-400 transition-colors" style={{ width: '18px', height: '18px' }} />
+          <span className="text-sm font-medium flex-1">Déconnexion</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Sidebar: React.FC<SidebarProps> = (props) => {
+  const { isOpen = true, onClose } = props;
+
+  return (
+    <>
+      {/* ── DESKTOP: part of normal flex flow, never fixed ── */}
+      <aside className="hidden lg:flex lg:flex-shrink-0 h-screen sticky top-0">
+        <SidebarContent {...props} onClose={undefined} />
+      </aside>
+
+      {/* ── MOBILE: fixed overlay ── */}
+      <div className="lg:hidden">
+        {/* Backdrop */}
+        {isOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity"
+            onClick={onClose}
+          />
+        )}
+        {/* Drawer */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 h-full transition-transform duration-300 ease-in-out
+            ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        >
+          <SidebarContent {...props} onClose={onClose} />
+        </aside>
       </div>
     </>
   );

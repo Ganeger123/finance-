@@ -7,21 +7,30 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === 'development';
   return {
     server: {
-      port: 3001,
-      host: '0.0.0.0',
+      port: 5173,
+      host: '127.0.0.1',
       middlewareMode: false,
-      // HMR: avoid custom ws config that can cause 400; use defaults
-      hmr: isDev,
-      // Proxy only /api/* so backend gets /api/auth/login etc.
+      // HMR configuration for hot module replacement (WebSocket)
+      hmr: isDev ? {
+        host: '127.0.0.1',
+        port: 5173,
+        protocol: 'ws',
+      } : undefined,
+      // Proxy /api/* and /media/* to backend running on port 8000
       proxy: isDev
         ? {
           '^/api/': {
-            target: 'http://localhost:8000',
+            target: 'http://127.0.0.1:8000',
             changeOrigin: true,
+            rewrite: (path) => path, // Keep /api prefix - backend routes registered with /api/auth, /api/admin, etc.
+            secure: false,
+            ws: true,
           },
-          '/media/': {
-            target: 'http://localhost:8000',
+          '^/media/': {
+            target: 'http://127.0.0.1:8000',
             changeOrigin: true,
+            rewrite: (path) => path,
+            secure: false,
           },
         }
         : undefined,

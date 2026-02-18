@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { User, UserStatus } from '../types';
 import { authApi } from '../apiClient';
 import { useLanguage } from '../context/LanguageContext';
+import { Eye, EyeOff, Loader } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -18,6 +19,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pendingAccount, setPendingAccount] = useState<{ email: string; name: string } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const decodeToken = (token: string) => {
     try {
@@ -241,14 +243,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Password</label>
                     {!isRegistering && <button type="button" className="text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest transition-colors font-black">Forgot?</button>}
                   </div>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
-                    placeholder="••••••••"
-                  />
+                  <div className="relative group">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-6 py-5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none transition-all font-semibold text-slate-800 pr-14"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -265,15 +281,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-5 bg-[#0d1421] hover:bg-slate-800 text-white font-black rounded-2xl transition-all shadow-xl shadow-slate-200 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 text-lg"
+                className="w-full py-5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black rounded-2xl transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-3 text-base uppercase tracking-widest"
               >
                 {isLoading ? (
-                  <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : (
                   <>
-                    <span>{isRegistering ? t('create_account') : (language === 'fr' ? 'Se Connecter' : 'Sign In')}</span>
-                    <span className="text-xl">→</span>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    <span>Signing in...</span>
                   </>
+                ) : (
+                  isRegistering ? 'Sign up' : 'Sign in'
                 )}
               </button>
             </form>

@@ -1,37 +1,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 :root {
-  /* FinTrack Design Tokens */
-  --bg-layout: #f5f7fa;
-  --bg-sidebar: linear-gradient(180deg, #374b91 0%, #202a54 100%);
-  --sidebar-active: rgba(255, 255, 255, 0.1);
-  --sidebar-text: #e2e8f0;
+  /* Modern FinTech Design Tokens */
+  --bg-layout: #f8fafc;
+  --bg-sidebar: linear-gradient(180deg, #0f172a 0%, #0d1220 100%);
+  --sidebar-active: rgba(99, 102, 241, 0.15);
+  --sidebar-text: #e5e7eb;
 
   --bg-card: #ffffff;
-  --text-primary: #1e293b;
+  --text-primary: #0f172a;
   --text-secondary: #64748b;
 
-  --primary-blue: #4f46e5;
-  --primary-blue-hover: #4338ca;
+  --primary-indigo: #6366f1;
+  --primary-indigo-hover: #4f46e5;
+  --primary-indigo-dark: #4338ca;
 
-  --accent-turquoise: #2dd4bf;
+  --accent-green: #22c55e;
   --accent-blue: #3b82f6;
-  --accent-coral: #fb7185;
-  --accent-green: #10b981;
+  --accent-danger: #ef4444;
+  --accent-warning: #f59e0b;
+  --accent-dark-text: #e5e7eb;
 
   --border-radius: 2rem;
   --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
   --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
   --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark {
   --bg-layout: #0f172a;
-  --bg-sidebar: #1e293b;
-  --bg-card: #1e293b;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --sidebar-text: #94a3b8;
+  --bg-sidebar: linear-gradient(180deg, #0d1220 0%, #0a0f1c 100%);
+  --bg-card: #111827;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --sidebar-text: #d1d5db;
 }
 
 body {
@@ -66,17 +69,28 @@ body {
   background-color: var(--bg-card);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-sm);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: var(--transition-smooth);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .fintrack-card {
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .fintrack-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Sidebar Styling */
 .sidebar-gradient {
   background: var(--bg-sidebar);
+  color: var(--sidebar-text);
+}
+
+.sidebar-gradient button:hover {
+  background-color: var(--sidebar-active);
+  transition: var(--transition-smooth);
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */

@@ -3,7 +3,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from .database import engine, Base
-from .routes import auth, transaction, admin, assistant, profile
+from .routes import auth, transaction, admin, assistant, profile, ai, websocket_routes
+# Import models to ensure they're registered with the database
+from .models import user, transaction as transaction_model, logs
 from .config import settings
 
 # Configure logging
@@ -34,6 +36,8 @@ app.include_router(transaction.router, prefix="/api", tags=["Transactions"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(assistant.router, prefix="/api/assistant", tags=["Assistant"])
 app.include_router(profile.router, prefix="/api/profile", tags=["Profile"])
+app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
+app.include_router(websocket_routes.router, prefix="/api", tags=["WebSocket"])
 
 @app.get("/")
 def read_root():

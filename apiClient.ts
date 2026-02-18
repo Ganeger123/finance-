@@ -13,7 +13,11 @@ const getApiBaseUrl = (): string => {
             return 'https://panace-api.onrender.com/api';
         }
         const url = env?.VITE_API_BASE_URL || 'http://localhost:8000/api';
-        return typeof url === 'string' ? url.replace(/\/+$/, '') : 'http://localhost:8000/api';
+        // Trim whitespace and trailing slashes to avoid accidental "/api " or similar
+        if (typeof url === 'string') {
+            return url.trim().replace(/\/+$/, '');
+        }
+        return 'http://localhost:8000/api';
     } catch {
         return 'http://localhost:8000/api';
     }
@@ -21,12 +25,25 @@ const getApiBaseUrl = (): string => {
 
 // Re-resolve base URL on each access so runtime fallback (e.g. Render) works after hydration
 export function getAPIBaseURL(): string {
-    return getApiBaseUrl();
+    return getApiBaseUrl().trim();
 }
-export const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl().trim();
+
+// Debug helper: log resolved base URL during development to catch trailing-space issues
+if (typeof window !== 'undefined' && (import.meta as any).env?.DEV) {
+    // eslint-disable-next-line no-console
+    const resolved = getApiBaseUrl();
+    const trimmed = resolved.trim();
+    console.debug('[apiClient] Raw API_BASE_URL:', JSON.stringify(resolved));
+    console.debug('[apiClient] Trimmed API_BASE_URL:', JSON.stringify(trimmed));
+    console.debug('[apiClient] Length (raw):', resolved.length, 'Length (trimmed):', trimmed.length);
+    if (resolved !== trimmed) {
+        console.warn('[apiClient] WARNING: API_BASE_URL has whitespace!', {raw: resolved, trimmed});
+    }
+}
 
 const api = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: API_BASE_URL.trim(),
     timeout: 45000, // 45s to allow Render free-tier cold start (~30–60s)
     headers: {
         'Accept': 'application/json',
@@ -42,7 +59,15 @@ const getAuthHeader = () => {
 api.interceptors.request.use(
     (config) => {
         // Use current base URL in case it was resolved at runtime (e.g. Render)
-        config.baseURL = getApiBaseUrl();
+        const resolvedBaseURL = getApiBaseUrl().trim();
+        config.baseURL = resolvedBaseURL;
+        
+        // DEBUG: Log the full URL being constructed
+        if ((import.meta as any).env?.DEV) {
+            const fullUrl = `${config.baseURL}${config.url}`;
+            console.debug(`[apiClient] Request: ${config.method?.toUpperCase()} ${fullUrl}`);
+        }
+        
         try {
             const token = localStorage.getItem('token');
             if (token) {
@@ -142,6 +167,14 @@ export const authApi = {
     }),
 };
 
+export const profileApi = {
+    uploadPhoto: (formData: FormData) => api.post('/profile/photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    updateName: (name: string) => api.put('/profile/name', { name }),
+    getProfile: () => api.get('/profile/me'),
+};
+
 /** Form submission tracking (logs + notifies admin). */
 export const formSubmitApi = {
     submit: (formName: string, dataSummary: string | object) =>
@@ -168,6 +201,9 @@ export const adminApi = {
     getUsers: (status?: string) => api.get('/admin/users/', { params: { status } }),
     approveUser: (userId: number) => api.post(`/admin/users/${userId}/approve`),
     rejectUser: (userId: number) => api.post(`/admin/users/${userId}/reject`),
+    deleteUser: (userId: number) => api.post(`/admin/users/${userId}/delete`),
+    resetPassword: (userId: number, newPassword: string) => api.post(`/admin/users/${userId}/reset-password`, { new_password: newPassword }),
+    getLogs: (skip?: number, limit?: number) => api.get('/admin/logs', { params: { skip, limit } }),
     updateUserStatus: (userId: number, status: string) => api.patch(`/admin/users/${userId}/status`, { status }),
 };
 
@@ -229,6 +265,24 @@ export const supportApi = {
 /** Notifications: recent activity for current user. */
 export const notificationsApi = {
     getNotifications: (params?: { limit?: number }) => api.get('/notifications/', { params }),
+};
+
+/** AI Transaction Parser: Natural language to structured transaction data */
+export const aiApi = {
+    parseTransaction: (text: string) => api.post('/ai/parse-transaction', { text }),
+    getParserSuggestions: () => api.get('/ai/parse-suggestions'),
+    getRecurringSuggestions: (daysBack?: number) => api.get('/ai/recurring-suggestions', { params: { days_back: daysBack || 90 } }),
+};
+
+/** WebSocket: Real-time user presence tracking */
+export const presenceApi = {
+    getOnlineUsers: () => api.get('/online-users'),
+    getOnlineStatus: (userId: number) => api.get(`/online-status/${userId}`),
+    connectWebSocket: (token: string) => {
+        const protocol = getApiBaseUrl().startsWith('https') ? 'wss' : 'ws';
+        const baseUrl = getApiBaseUrl().replace(/^https?:/, '');
+        return new WebSocket(`${protocol}:${baseUrl}/api/ws/${token}`);
+    },
 };
 
 /** AI Assistant: rule-based helper. */

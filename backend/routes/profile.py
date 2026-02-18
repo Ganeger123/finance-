@@ -2,8 +2,10 @@ import os
 import shutil
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from ..database import get_db
 from ..services import crud
+from ..schemas import auth as auth_schema
 from .auth import get_current_user
 from ..models import user as user_model
 
@@ -12,6 +14,9 @@ router = APIRouter()
 # Max file size: 5MB
 MAX_FILE_SIZE = 5 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+
+class NameUpdate(BaseModel):
+    name: str
 
 @router.post("/photo")
 async def upload_profile_photo(
@@ -62,3 +67,30 @@ async def upload_profile_photo(
     crud.update_user_photo(db, user_id=current_user.id, photo_url=photo_url)
     
     return {"photo_url": photo_url}
+
+@router.put("/name", response_model=auth_schema.UserResponse)
+def update_user_name(
+    update: NameUpdate,
+    db: Session = Depends(get_db),
+    current_user: user_model.User = Depends(get_current_user)
+):
+    """
+    Update user's name/username
+    """
+    if not update.name or len(update.name.strip()) == 0:
+        raise HTTPException(status_code=400, detail="Name cannot be empty")
+    
+    updated_user = crud.update_user_name(db, user_id=current_user.id, name=update.name)
+    if not updated_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return updated_user
+
+@router.get("/me", response_model=auth_schema.UserResponse)
+def get_profile(
+    current_user: user_model.User = Depends(get_current_user)
+):
+    """
+    Get current user's profile
+    """
+    return current_user

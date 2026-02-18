@@ -228,12 +228,25 @@ const App: React.FC = () => {
   }, [user, selectedWorkspace]);
 
   const isAdmin = user && (user.role === 'admin' || user.role === 'super_admin');
+
+  // Protect admin pages - redirect if user is not admin
   useEffect(() => {
-    const adminPages = ['admin-dashboard', 'admin-settings', 'admin-support'];
+    const adminPages = ['admin-dashboard', 'admin-settings', 'admin-support', 'users'];
     if (user && adminPages.includes(currentPage) && !isAdmin) {
+      console.warn('🔒 Access Denied: Non-admin user attempted to access admin page:', currentPage);
       setCurrentPage('dashboard');
     }
   }, [user, currentPage, isAdmin]);
+
+  // Block admin access if user is not approved
+  useEffect(() => {
+    if (user && user.status !== 'approved') {
+      const adminPages = ['admin-dashboard', 'admin-settings', 'admin-support', 'users', 'reports', 'vendors'];
+      if (adminPages.includes(currentPage)) {
+        setCurrentPage('dashboard');
+      }
+    }
+  }, [user, currentPage]);
 
   const handleAddTransaction = (type: 'EXPENSE' | 'INCOME') => {
     fetchTransactions();
@@ -260,6 +273,27 @@ const App: React.FC = () => {
 
   const renderPage = () => {
     if (!user) return null;
+
+    // Guard: Admin pages require admin role
+    const adminPages = ['admin-dashboard', 'admin-settings', 'admin-support'];
+    if (adminPages.includes(currentPage) && !isAdmin) {
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🔒</div>
+            <h2 className="text-2xl font-black text-slate-900 mb-2">Access Denied</h2>
+            <p className="text-slate-500 mb-6">You do not have permission to access this page.</p>
+            <button
+              onClick={() => setCurrentPage('dashboard')}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard transactions={transactions} />;
@@ -277,7 +311,7 @@ const App: React.FC = () => {
       case 'form-builder':
         return selectedWorkspace ? <FormBuilder workspace={selectedWorkspace} onFormCreated={() => setCurrentPage('custom-expenses')} /> : <WorkspaceManager onSelect={setSelectedWorkspace} />;
       case 'users':
-        return <UserManagement />;
+        return isAdmin ? <UserManagement /> : <Dashboard transactions={transactions} />;
       case 'vendors':
         return <Vendors user={user} />;
       case 'reports':
@@ -285,11 +319,11 @@ const App: React.FC = () => {
       case 'custom-expenses':
         return selectedWorkspace ? <CustomExpenseEntry workspace={selectedWorkspace} role={user.role} onAdd={fetchTransactions} /> : <WorkspaceManager onSelect={setSelectedWorkspace} />;
       case 'admin-dashboard':
-        return <AdminActivityDashboard />;
+        return isAdmin ? <AdminActivityDashboard /> : null;
       case 'admin-settings':
-        return <AdminSettings />;
+        return isAdmin ? <AdminSettings /> : null;
       case 'admin-support':
-        return <AdminSupport />;
+        return isAdmin ? <AdminSupport /> : null;
       case 'notifications':
         return <Notifications />;
       case 'help':
@@ -312,27 +346,31 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--bg-layout)] text-slate-900 transition-colors duration-300 font-sans">
+    <div className="flex flex-row min-h-screen bg-[var(--bg-layout)] text-slate-900 transition-colors duration-300 font-sans">
       <InstallPWA />
 
+      {/* Sidebar — handles desktop (sticky) and mobile (fixed overlay) internally */}
       <Sidebar
         role={user.role}
         activePage={currentPage}
         onNavigate={setCurrentPage}
         onLogout={handleLogout}
-        userName={user.full_name || 'User'}
+        userName={user.full_name || user.name || 'User'}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <main className="flex-1 transition-all duration-300 overflow-y-auto max-h-screen scroll-smooth">
-        {/* Mobile Navbar */}
-        <div className="lg:hidden sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200 z-30 px-6 py-4 flex items-center justify-between">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-slate-600">
-            <span className="text-2xl">☰</span>
+      <main className="flex-1 min-w-0 overflow-y-auto max-h-screen scroll-smooth">
+        {/* Mobile top bar */}
+        <div className="lg:hidden sticky top-0 bg-white/90 backdrop-blur-md border-b border-slate-200 z-30 px-5 py-3.5 flex items-center justify-between">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 -ml-1 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            <span className="text-xl leading-none">☰</span>
           </button>
-          <span className="font-black text-xl tracking-tight text-[#374b91]">FinTrack</span>
-          <div className="w-8"></div>
+          <span className="font-black text-lg tracking-tight text-[#374b91]">FinTrack</span>
+          <div className="w-8" />
         </div>
 
         <div className="max-w-[1400px] mx-auto p-6 lg:p-10">
@@ -347,6 +385,7 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
+
 
       {/* Global Modals */}
       <Modal

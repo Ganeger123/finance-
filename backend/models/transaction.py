@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
+from datetime import datetime
 from ..database import Base
 
 class Transaction(Base):
@@ -15,3 +16,4 @@ class Transaction(Base):
     student_count = Column(Integer, nullable=True)
     subtype = Column(String, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

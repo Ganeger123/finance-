@@ -5,6 +5,7 @@ from ..models import transaction as transaction_model
 from ..schemas import auth as auth_schema
 from ..schemas import transaction as transaction_schema
 from .auth import get_password_hash
+from typing import Optional
 
 def get_user_by_email(db: Session, email: str):
     return db.query(user_model.User).filter(user_model.User.email == email).first()
@@ -58,6 +59,23 @@ def update_user_photo(db: Session, user_id: int, photo_url: str):
         db.refresh(db_user)
     return db_user
 
+def update_user_name(db: Session, user_id: int, name: str):
+    """Update user's name/username"""
+    db_user = db.query(user_model.User).filter(user_model.User.id == user_id).first()
+    if db_user:
+        db_user.name = name
+        db.commit()
+        db.refresh(db_user)
+    return db_user
+
+def delete_user(db: Session, user_id: int):
+    """Soft delete or hard delete user"""
+    db_user = db.query(user_model.User).filter(user_model.User.id == user_id).first()
+    if db_user:
+        db.delete(db_user)
+        db.commit()
+    return db_user
+
 def get_dashboard_stats(db: Session, user_id: int):
     income = db.query(func.sum(transaction_model.Transaction.amount)).filter(
         transaction_model.Transaction.user_id == user_id,
@@ -91,3 +109,35 @@ def get_biggest_expense(db: Session, user_id: int):
         transaction_model.Transaction.user_id == user_id,
         transaction_model.Transaction.type == 'expense'
     ).order_by(transaction_model.Transaction.amount.desc()).first()
+
+def create_system_log(
+    db: Session,
+    action: str,
+    details: Optional[str] = None,
+    user_id: Optional[int] = None,
+    ip_address: Optional[str] = None
+):
+    """Create a system log entry"""
+    try:
+        from ..models.logs import SystemLog
+        log_entry = SystemLog(
+            action=action,
+            details=details,
+            user_id=user_id,
+            ip_address=ip_address
+        )
+        db.add(log_entry)
+        db.commit()
+        db.refresh(log_entry)
+        return log_entry
+    except Exception as e:
+        print(f"Failed to create system log: {e}")
+        return None
+
+def get_system_logs(db: Session, skip: int = 0, limit: int = 100):
+    """Get system logs"""
+    try:
+        from ..models.logs import SystemLog
+        return db.query(SystemLog).order_by(SystemLog.timestamp.desc()).offset(skip).limit(limit).all()
+    except Exception:
+        return []

@@ -17,6 +17,7 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
   const { addToast } = useToast();
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this expense?')) return;
@@ -27,6 +28,16 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
     } catch (err) {
       addToast('error', 'Failed to delete');
     }
+  };
+
+  const toggleNote = (id: string) => {
+    const newExpanded = new Set(expandedNotes);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedNotes(newExpanded);
   };
 
   const expenseHistory = transactions
@@ -107,11 +118,38 @@ const Expenses: React.FC<ExpensesProps> = ({ transactions, onAdd, selectedWorksp
                     <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-sm">
                       <ArrowDownRight className="w-6 h-6" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{tx.category}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                        {tx.date} • {tx.comment || 'No notes'}
-                      </p>
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                        <span>{tx.date}</span>
+                        {tx.comment && (
+                          <div className="mt-2">
+                            {tx.comment.length > 120 && !expandedNotes.has(tx.id) ? (
+                              <div>
+                                <p className="text-slate-600 font-medium normal-case">{tx.comment.substring(0, 120)}...</p>
+                                <button
+                                  onClick={() => toggleNote(tx.id)}
+                                  className="text-indigo-500 hover:text-indigo-600 font-bold text-[9px] uppercase tracking-widest mt-1"
+                                >
+                                  Read More →
+                                </button>
+                              </div>
+                            ) : (
+                              <div>
+                                <p className="text-slate-600 font-medium normal-case">{tx.comment}</p>
+                                {tx.comment.length > 120 && (
+                                  <button
+                                    onClick={() => toggleNote(tx.id)}
+                                    className="text-indigo-500 hover:text-indigo-600 font-bold text-[9px] uppercase tracking-widest mt-1"
+                                  >
+                                    ← Show Less
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
