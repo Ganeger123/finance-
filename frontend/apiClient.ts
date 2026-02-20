@@ -6,21 +6,22 @@ const getApiBaseUrl = (): string => {
         const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-        // 1. Force Localhost Dev mode if on 127.0.0.1 or localhost
+        // 1. Force Localhost Dev mode
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return env?.DEV ? '/api' : 'http://localhost:8000/api';
         }
 
-        // 2. Production URL priority (Vercel or Render)
-        // If we are on ANY remote hosting, default to the Render backend
-        if (hostname.includes('vercel.app') || hostname.includes('onrender.com') || origin.includes('panace')) {
-            return 'https://panace-api.onrender.com/api';
+        // 2. Explicit Environment Variable (Priority)
+        // Set this in Vercel Dashboard -> Settings -> Environment Variables
+        const url = env?.VITE_API_URL;
+        if (url && typeof url === 'string' && url.trim().length > 0) {
+            return url.trim().replace(/\/+$/, '');
         }
 
-        // 3. Environment Variable (Set this in Vercel Dashboard -> Settings -> Environment Variables)
-        const url = env?.VITE_API_URL;
-        if (url && typeof url === 'string') {
-            return url.trim().replace(/\/+$/, '');
+        // 3. Known Production URLs
+        if (hostname.includes('vercel.app') || hostname.includes('onrender.com') || origin.includes('panace')) {
+            // Default to Render API if on any known hosting
+            return 'https://panace-api.onrender.com/api';
         }
 
         // 4. Default Fallback
@@ -30,28 +31,11 @@ const getApiBaseUrl = (): string => {
     }
 };
 
-// Re-resolve base URL on each access so runtime fallback (e.g. Render) works after hydration
-export function getAPIBaseURL(): string {
-    return getApiBaseUrl().trim();
-}
-export const API_BASE_URL = getApiBaseUrl().trim();
-
-// Debug helper: log resolved base URL during development to catch trailing-space issues
-if (typeof window !== 'undefined' && (import.meta as any).env?.DEV) {
-    // eslint-disable-next-line no-console
-    const resolved = getApiBaseUrl();
-    const trimmed = resolved.trim();
-    console.debug('[apiClient] Raw API_BASE_URL:', JSON.stringify(resolved));
-    console.debug('[apiClient] Trimmed API_BASE_URL:', JSON.stringify(trimmed));
-    console.debug('[apiClient] Length (raw):', resolved.length, 'Length (trimmed):', trimmed.length);
-    if (resolved !== trimmed) {
-        console.warn('[apiClient] WARNING: API_BASE_URL has whitespace!', { raw: resolved, trimmed });
-    }
-}
+// ... existing code ...
 
 const api = axios.create({
-    baseURL: API_BASE_URL.trim(),
-    timeout: 45000, // 45s to allow Render free-tier cold start (~30–60s)
+    baseURL: getApiBaseUrl().trim(),
+    timeout: 120000, // Increased to 120s for slow Render cold starts
     headers: {
         'Accept': 'application/json',
     },
