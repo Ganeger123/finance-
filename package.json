@@ -5,5 +5,16 @@
     "scripts": {
         "build": "cd frontend && npm install && npm run build",
         "install": "cd frontend && npm install"
+    },
+    "dependencies": {
+        "@vercel/postgres": "^0.10.0",
+        "bcryptjs": "^2.4.3",
+        "jsonwebtoken": "^9.0.2"
+    },
+    "devDependencies": {
+        "@types/bcryptjs": "^2.4.6",
+        "@types/jsonwebtoken": "^9.0.8",
+        "@types/node": "^20.11.0",
+        "typescript": "^5.3.3"
     }
 }

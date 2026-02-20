@@ -1,13 +1,27 @@
 {
     "version": 2,
     "name": "panace-monorepo",
-    "buildCommand": "cd frontend && npm install && npm run build",
-    "outputDirectory": "frontend/dist",
-    "framework": "vite",
+    "builds": [
+        {
+            "src": "frontend/package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "dist"
+            }
+        },
+        {
+            "src": "api/**/*.ts",
+            "use": "@vercel/node"
+        }
+    ],
     "rewrites": [
         {
+            "source": "/api/(.*)",
+            "destination": "/api/$1"
+        },
+        {
             "source": "/(?!api|_next|_static|public|favicon\\.ico|manifest\\.json|sw\\.js|pwa_icon_512\\.png).*",
-            "destination": "/index.html"
+            "destination": "/frontend/index.html"
         }
     ],
     "headers": [

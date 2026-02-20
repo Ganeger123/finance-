@@ -1,34 +1,8 @@
 import axios from 'axios';
 
 const getApiBaseUrl = (): string => {
-    try {
-        const env = (import.meta as any).env;
-        const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-
-        // 1. Force Localhost Dev mode
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            return env?.DEV ? '/api' : 'http://localhost:8000/api';
-        }
-
-        // 2. Explicit Environment Variable (Priority)
-        // Set this in Vercel Dashboard -> Settings -> Environment Variables
-        const url = env?.VITE_API_URL;
-        if (url && typeof url === 'string' && url.trim().length > 0) {
-            return url.trim().replace(/\/+$/, '');
-        }
-
-        // 3. Known Production URLs
-        if (hostname.includes('vercel.app') || hostname.includes('onrender.com') || origin.includes('panace')) {
-            // Default to Render API if on any known hosting
-            return 'https://panace-api.onrender.com/api';
-        }
-
-        // 4. Default Fallback
-        return 'https://panace-api.onrender.com/api';
-    } catch {
-        return 'http://localhost:8000/api';
-    }
+    // With Vercel Serverless, the API is same-origin at /api
+    return '/api';
 };
 
 // ... existing code ...
