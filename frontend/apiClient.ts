@@ -178,7 +178,7 @@ export const profileApi = {
 /** Form submission tracking (logs + notifies admin). */
 export const formSubmitApi = {
     submit: (formName: string, dataSummary: string | object) =>
-        api.post('/form-submit', { form_name: formName, data_summary: dataSummary }),
+        api.post('/form-submit/', { form_name: formName, data_summary: dataSummary }),
 };
 
 /** Admin-only API (RBAC: requires admin or super_admin). */
@@ -199,12 +199,12 @@ export const adminApi = {
     getSettings: () => api.get('/admin/settings/'),
     updateSettings: (data: any) => api.post('/admin/settings/', data),
     getUsers: (status?: string) => api.get('/admin/users/', { params: { status } }),
-    approveUser: (userId: number) => api.post(`/admin/users/${userId}/approve`),
-    rejectUser: (userId: number) => api.post(`/admin/users/${userId}/reject`),
-    deleteUser: (userId: number) => api.post(`/admin/users/${userId}/delete`),
-    resetPassword: (userId: number, newPassword: string) => api.post(`/admin/users/${userId}/reset-password`, { new_password: newPassword }),
-    getLogs: (skip?: number, limit?: number) => api.get('/admin/logs', { params: { skip, limit } }),
-    updateUserStatus: (userId: number, status: string) => api.patch(`/admin/users/${userId}/status`, { status }),
+    approveUser: (userId: number) => api.post(`/admin/users/${userId}/approve/`),
+    rejectUser: (userId: number) => api.post(`/admin/users/${userId}/reject/`),
+    deleteUser: (userId: number) => api.post(`/admin/users/${userId}/delete/`),
+    resetPassword: (userId: number, newPassword: string) => api.post(`/admin/users/${userId}/reset-password/`, { new_password: newPassword }),
+    getLogs: (skip?: number, limit?: number) => api.get('/admin/logs/', { params: { skip, limit } }),
+    updateUserStatus: (userId: number, status: string) => api.patch(`/admin/users/${userId}/update/`, { status }),
 };
 
 export const financeApi = {
