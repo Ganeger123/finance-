@@ -75,6 +75,9 @@ def _parse_login_body(request):
 @require_http_methods(["POST"])
 @csrf_exempt
 def login(request):
+    start_time = timezone.now()
+    logger.info(f"Login attempt started at {start_time}")
+    
     username, password = _parse_login_body(request)
     ip = get_client_ip(request)
     device = get_user_agent(request)
@@ -125,6 +128,9 @@ def login(request):
         "version": user.token_version,
     })
     refresh_token = create_refresh_token({"sub": user.email, "version": user.token_version})
+
+    duration = (timezone.now() - start_time).total_seconds()
+    logger.info(f"Login successful for {user.email} in {duration}s")
 
     return JsonResponse({
         "access_token": access_token,
