@@ -81,22 +81,21 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS: allow frontend origins (local + Render)
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    'http://127.0.0.1:5173',
-    'http://localhost:4173',
-    'http://127.0.0.1:4173',
-    'https://panace-web.onrender.com',
+# CORS: allow frontend origins (local + Render + Vercel subdomains)
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://localhost:\d+$",
+    r"^https?://127\.0\.0\.1:\d+$",
+    r"^https://.*\.vercel\.app$",
+    r"^https://panace-web\.onrender\.com$",
 ]
+
 _extra = os.environ.get('BACKEND_CORS_ORIGINS', '')
 if _extra:
+    if not isinstance(CORS_ALLOWED_ORIGINS, list):
+         CORS_ALLOWED_ORIGINS = []
     CORS_ALLOWED_ORIGINS.extend(x.strip() for x in _extra.split(',') if x.strip())
-CORS_ALLOW_CREDENTIALS = True
 
 # JWT (match FastAPI token shape)
 JWT_SECRET_KEY = os.environ.get('SECRET_KEY', SECRET_KEY)
@@ -151,24 +150,19 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/app.log',
-            'formatter': 'verbose',
-        },
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': True,
         },
         'api': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': True,
         },
