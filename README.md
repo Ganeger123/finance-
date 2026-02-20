@@ -1,47 +1,57 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Panacée FinSys — Financial Management Dashboard
 
-# Panacée FinSys - Financial Management Dashboard
+A comprehensive Fintech SaaS application for detailed financial analytics, transaction tracking, and user management. Designed for the Haitian market with HTG-based accounting and modern gradients.
 
-A high-end, production-ready financial management system for tracking income and expenses in Haitian Gourdes (HTG).
+## 📁 Project Structure
 
-## 🚀 Quick Start (Production)
+```text
+panace-finsys/
+├── frontend/       # React + Vite + Tailwind CSS
+├── backend/        # Django + REST Framework + SQLite/Postgres
+├── docs/           # Documentation and Setup Guides
+├── .env.example    # Environment variables template
+└── README.md
+```
 
-### 1. Backend Setup
-1. Navigate to `backend/`.
-2. Activate your virtual environment: `.\venv\Scripts\activate` (Windows).
-3. Install dependencies: `pip install -r requirements.txt`.
-4. Configure `.env`:
-   - `DATABASE_URL`: Set to `sqlite:///./finance.db` (Default) or PostgreSQL.
-   - `SMTP_PASSWORD`: Your Gmail App Password for notifications.
-5. Run the server: `python -m uvicorn app.main:app --reload`.
+## 🛠️ Local Setup
 
-### 2. Frontend Setup
-1. From the root directory: `npm install`.
-2. Run the dashboard: `npm run dev`.
-3. Open [http://localhost:3000](http://localhost:3000).
+### Prerequisites
+- Node.js (v18+)
+- Python (v3.10+)
 
-## 🔐 Credentials
-- **Admin**: `hachllersocials@gmail.com`
-- **Password**: `12122007`
+### Backend Setup
+1. `cd backend`
+2. `python -m venv venv`
+3. `venv\Scripts\activate` (Windows) or `source venv/bin/activate` (Mac/Linux)
+4. `pip install -r requirements.txt`
+5. `python manage.py migrate`
+6. `python manage.py runserver`
 
-## 📧 Email Notifications
-The system automatically sends a welcome email to every newly registered user. Ensure `SMTP_PASSWORD` is set in the `backend/.env` for this feature to work.
+### Frontend Setup
+1. `cd frontend`
+2. `npm install`
+3. `npm run dev`
 
-## 🌐 Deployment (Cloud)
+## 🚀 Deployment
 
-### Render Blueprint (Recommended)
-1. Click **New +** on your [Render Dashboard](https://dashboard.render.com/) and select **Blueprint**.
-2. Connect this repository.
-3. Render will automatically detect the `render.yaml` and set up your **PostgreSQL Database**, **FastAPI API**, and **React Dashboard**!
+### Frontend (Vercel)
+- The project is ready for Vercel. 
+- Point your Vercel project to the `frontend/` directory.
+- Set `VITE_API_URL` in the Vercel Dashboard.
 
-### Post-Deployment Setup
-- **API URL**: Once the API service is live, copy its URL (e.g., `https://panace-api.onrender.com/api`) and paste it into the `VITE_API_BASE_URL` environment variable in the `panace-web` service settings.
-- **SMTP**: Set your `SMTP_PASSWORD` in the `panace-api` environment variables to enable welcome emails.
+### Backend (Render/Heroku)
+- The project includes `render.yaml` for easy deployment on Render.
+- Point Render to the `backend/` directory.
+- Set `SECRET_KEY`, `DATABASE_URL`, and other env variables in the Render Dashboard.
 
-## ✨ Features
-- **HTG Native**: Built-in support for Gourde formatting and 6-digit constraints.
-- **PDF Export**: Generate financial reports instantly with charts and tables.
-- **RBAC**: Role-based access control for Admins and Staff.
-- **Real-time Analytics**: Dashboard with interactive Recharts visualizations.
+## ⚙️ Environment Variables
+
+Copy `.env.example` to `.env` in the respective folders and fill in your values.
+
+| Variable | Description |
+| --- | --- |
+| `VITE_API_URL` | Backend API URL (e.g. https://api.yourdomain.com/api) |
+| `SECRET_KEY` | Django Secret Key |
+| `DEBUG` | Set to False in production |
+| `DATABASE_URL` | Postgres Connection String |
+| `SMTP_*` | Email Settings for notifications |
