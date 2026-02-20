@@ -3,21 +3,28 @@ import axios from 'axios';
 const getApiBaseUrl = (): string => {
     try {
         const env = (import.meta as any).env;
-        // In dev, use relative /api so Vite proxy sends same-origin requests (no CORS)
-        if (env?.DEV) {
-            return '/api';
-        }
-        // Runtime fallback: if we're on Render frontend, always point to Render API (works even if build-time env was wrong)
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        if (origin === 'https://panace-web.onrender.com') {
+
+        // 1. Force Localhost Dev mode if on 127.0.0.1 or localhost
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return env?.DEV ? '/api' : 'http://localhost:8000/api';
+        }
+
+        // 2. Production URL priority (Vercel or Render)
+        // If we are on ANY remote hosting, default to the Render backend
+        if (hostname.includes('vercel.app') || hostname.includes('onrender.com') || origin.includes('panace')) {
             return 'https://panace-api.onrender.com/api';
         }
-        const url = env?.VITE_API_URL || 'http://localhost:8000/api';
-        // Trim whitespace and trailing slashes to avoid accidental "/api " or similar
-        if (typeof url === 'string') {
+
+        // 3. Environment Variable (Set this in Vercel Dashboard -> Settings -> Environment Variables)
+        const url = env?.VITE_API_URL;
+        if (url && typeof url === 'string') {
             return url.trim().replace(/\/+$/, '');
         }
-        return 'http://localhost:8000/api';
+
+        // 4. Default Fallback
+        return 'https://panace-api.onrender.com/api';
     } catch {
         return 'http://localhost:8000/api';
     }
